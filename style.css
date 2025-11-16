@@ -1,0 +1,267 @@
+body {
+      font-family: system-ui, sans-serif;
+      max-width: 80vw;
+      margin: 0 auto;
+      padding: 1rem;
+	  background-color:white;
+    }
+    h1 { font-size: 1.3rem; }
+    form { margin-bottom: 1.5rem; }
+    label { display: block; margin-top: 0.75rem; }
+    input, select, textarea, button {
+      width: 100%;
+      padding: 0.4rem;
+      font-size: 1rem;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 1rem;
+      cursor: pointer;
+    }
+    .hidden { display: none; }
+    .message {
+      margin-top: 0.75rem;
+      padding: 0.5rem;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+    .message.ok { background: #e0ffe0; }
+    .message.error { background: #ffe0e0; }
+	
+	/* Layout principal dentro de #app-section */
+.app-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+#form-section, #list-section {
+  background: #ffffff;
+  padding: 0.8rem;
+  border-radius: 8px;
+  box-shadow: 0 0 6px rgba(0,0,0,0.06);
+}
+
+/* Tarjetas de ausencias */
+.absence-item {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  margin-top: 0.4rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  background: #fafafa;
+}
+
+.absence-main {
+  flex: 1;
+}
+
+.absence-main strong {
+  display: block;
+}
+
+.absence-meta {
+  font-size: 0.8rem;
+  color: #555;
+}
+
+.absence-actions button {
+  font-size: 0.85rem;
+}
+
+/* Responsive: dos columnas en pantallas anchas */
+@media (min-width: 768px) {
+  .app-grid {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  #form-section, #list-section {
+    flex: 1;
+  }
+}
+
+/* ================================
+   BOTONES GENERALES
+   ================================ */
+button {
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 0.45rem 0.8rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+/* ================================
+   BOTÓN VERDE → GUARDAR AUSENCIA
+   ================================ */
+.btn-save {
+  background: #2e8b57;     /* verde profesional */
+  color: white;
+}
+
+.btn-save:hover {
+  background: #27764a;
+}
+
+/* ================================
+   BOTÓN AZUL → ACTUALIZAR LISTA
+   ================================ */
+.btn-refresh {
+  background: #1e88e5;     /* azul claro bonito */
+  color: white;
+}
+
+.btn-refresh:hover {
+  background: #166fbe;
+}
+
+/* ================================
+   BOTÓN ROJO → ELIMINAR AUSENCIA
+   ================================ */
+.btn-delete {
+  background: #d32f2f;
+  color: white;
+}
+
+.btn-delete:hover {
+  background: #b71c1c;
+}
+/* ================================
+   ENCABEZADO SUPERIOR
+   ================================ */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: start;
+  gap:10px;
+  background: #ffffff;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  box-shadow: 0 0 6px rgba(0,0,0,0.06);
+}
+
+/* Parte izquierda: logo + texto */
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ies-logo {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
+}
+
+.session-text {
+  font-size: 0.95rem;
+  color: #333;
+}
+
+/* Botón cerrar sesión */
+.btn-logout {
+  background: #888;      /* gris neutro */
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.45rem 0.8rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+  max-width: 150px;
+}
+
+.btn-logout:hover {
+  background: #666;
+}
+
+.btn-logout:active {
+  transform: scale(0.97);
+}
+
+/* ================================
+   Responsive
+   ================================ */
+
+@media (max-width: 600px) {
+  .app-header {
+    flex-direction: column;
+    gap: 0.6rem;
+    text-align: center;
+  }
+}
+
+/* =====================================
+   SECCIÓN DE SUSTITUCIONES
+   ===================================== */
+#substitutions-section {
+  margin-top: 1.5rem;
+  background: #ffffff;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  box-shadow: 0 0 6px rgba(0,0,0,0.06);
+}
+
+#substitutions-section h2 {
+  margin-top: 0;
+  margin-bottom: 0.8rem;
+}
+
+.substitutions-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.substitutions-block {
+  flex: 1;
+}
+
+.substitutions-block h3 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+.substitutions-block > span{ /*pequeña nota aclaratoria*/
+  font-size: 0.75rem;
+  color: #555;
+}
+
+/* Tabla de sustituciones activas */
+.substitutions-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.substitutions-table th,
+.substitutions-table td {
+  border: 1px solid #ddd;
+  padding: 0.4rem 0.5rem;
+}
+
+.substitutions-table th {
+  background: #f5f5f5;
+  text-align: left;
+}
+
+/* Responsive: dos columnas en pantallas anchas */
+@media (min-width: 768px) {
+  .substitutions-layout {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+}

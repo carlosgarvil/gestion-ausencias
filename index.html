@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Registro de ausencias</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="style.css" />
+  
+</head>
+<body>
+  <h1>Registro de ausencias</h1>
+
+  <!-- Bloque de LOGIN -->
+  <section id="login-section">
+    <h2>Acceso</h2>
+    <form id="login-form">
+      <label>
+        Correo
+        <input type="email" id="login-email" required />
+      </label>
+      <label>
+        Contraseña
+        <input type="password" id="login-password" required />
+      </label>
+      <button type="submit">Entrar</button>
+      <div id="login-message" class="message hidden"></div>
+    </form>
+  </section>
+
+  <!-- Bloque de APP (solo visible si hay sesión) -->
+<!-- Bloque de APP (solo visible si hay sesión) -->
+<section id="app-section" class="hidden">
+
+  <header class="app-header">
+    <div class="header-left">
+      <!--<img src="logo-ies.png" alt="Logo IES" class="ies-logo">-->
+      <span class="session-text">
+        Sesión iniciada como <strong id="user-email"></strong>
+      </span>
+    </div>
+
+    <button id="btn-logout" type="button" class="btn-logout">Cerrar sesión</button>
+  </header>
+  <hr/>
+  <div class="app-grid">
+    <!-- Columna izquierda: formulario de NUEVA ausencia -->
+    <section id="form-section">
+      <h2>Registrar nueva ausencia</h2>
+<ul>
+        <li>📅 <strong>Una fecha</strong> → crea una ausencia individual.</li>
+        <li>🗓️ <strong>Con "Fecha hasta"</strong> → se genera una ausencia por cada día en el rango indicado.</li>
+      </ul>
+      <form id="absence-form">
+        <label>
+          Docente
+          <select id="teacher-select" required>
+            <option value="">Selecciona…</option>
+          </select>
+        </label>
+
+        <label>
+          Fecha desde
+          <input type="date" id="date-from" required />
+        </label>
+
+        <label>
+          Fecha hasta (opcional)
+          <input type="date" id="date-to" />
+        </label>
+
+        <label>
+          Hora inicial (tramo)
+          <input type="number" id="start-slot" min="1" max="14" value="1" required />
+        </label>
+
+        <label>
+          Hora final (tramo)
+          <input type="number" id="end-slot" min="1" max="14" value="14" required />
+        </label>
+
+        <label>
+          Motivo (opcional)
+          <textarea id="reason" rows="2"></textarea>
+        </label>
+
+<button type="submit" class="btn-save">Guardar ausencia</button>
+        <div id="absence-message" class="message hidden"></div>
+      </form>
+    </section>
+
+    <!-- Columna derecha: selector de fecha + lista de ausencias -->
+    <section id="list-section">
+      <h2>Ausencias del día</h2>
+      <label>
+        Fecha
+        <input type="date" id="list-date" />
+      </label>
+<button type="button" id="btn-refresh-list" class="btn-refresh">Actualizar</button>
+
+      <div id="list-container" style="margin-top: 0.75rem;"></div>
+    </section>
+  </div>
+  <hr/>
+    <section id="substitutions-section">
+    <h2>🔁 Gestión de sustituciones</h2>
+      <p>
+  En caso de sustitución, es necesario que las ausencias enviadas desde el formulario del centro se registren correctamente y que aparezca el nombre correcto en el panel general. Si el docente sustituto es asimismo sustituido, deberá indicarse el cambio siempre con respecto al <strong>docente titular</strong>.
+</p><p>Puede revertir la sustitución con el botón “Quitar sustituto”.</p>
+
+    <div class="substitutions-layout">
+      <!-- Bloque izquierda: sustituciones activas -->
+      <div class="substitutions-block">
+        <h3>Sustituciones activas</h3>
+        <p class="absence-meta">Si el correo del formulario es distinto al del titular, se considera que hay una sustitución activa.</p>
+        <table class="substitutions-table">
+          <thead>
+            <tr>
+              <th>Titular</th>
+              <th>Nombre en panel</th>
+              <th>Email formulario</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="substitutions-body">
+            <!-- Aquí se inyectarán las filas por JS -->
+          </tbody>
+        </table>
+        <p id="substitutions-empty" class="absence-meta" style="margin-top:0.4rem; display:none;">
+          No hay sustituciones activas.
+        </p>
+      </div>
+
+      <!-- Bloque derecha: añadir sustituto -->
+      <div class="substitutions-block">
+        <h3>Añadir / cambiar sustituto</h3>
+        <form id="substitution-form">
+          <label>
+            Profesor titular
+            <select id="substitution-teacher-select" required>
+              <option value="">Selecciona titular…</option>
+            </select>
+          </label>
+
+          <label>
+            Nombre que se mostrará en el panel (Apellidos, Nombre)
+            <input type="text" id="substitution-display-name" required />
+          </label>
+
+          <label>
+            Email del sustituto
+            <input type="email" id="substitution-email-form" required value="@iespoligonosur.org"/>
+          </label>
+
+          <button type="submit" class="btn-save">Guardar sustitución</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+</section>
+
+  <!-- Supabase JS desde CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+   <script src="script.js"></script>
+    
+</body>
+</html>
+
