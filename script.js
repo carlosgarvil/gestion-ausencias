@@ -321,6 +321,11 @@ createApp({
       absence.end_slot = absence.editEnd;
       absence.editMessage = "Cambios guardados";
       absence.editMessageType = "ok";
+      function wait(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+  await wait(1000);
+      absence.editing = false;
     },
     async deleteAbsence(absenceId) {
       if (!confirm("¿Eliminar esta ausencia?")) return;
