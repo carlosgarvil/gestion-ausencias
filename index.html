@@ -2,197 +2,257 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Registro de ausencias</title>
+  <title>Gestión de ausencias - IES Polígono Sur</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link rel="stylesheet" href="style.css" />
-  
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>Registro de ausencias</h1>
+  <div id="app">
+    <h1>Gestión de ausencias del profesorado</h1>
 
-  <!-- Bloque de LOGIN -->
-  <section id="login-section">
-    <h2>Acceso</h2>
-    <form id="login-form">
-      <label>
-        Correo
-        <input type="email" id="login-email" required />
-      </label>
-      <label>
-        Contraseña
-        <input type="password" id="login-password" required />
-      </label>
-      <button type="submit">Entrar</button>
-      <div id="login-message" class="message hidden"></div>
-    </form>
-  </section>
-
-  <!-- Bloque de APP (solo visible si hay sesión) -->
-<!-- Bloque de APP (solo visible si hay sesión) -->
-<section id="app-section" class="hidden">
-
-  <header class="app-header">
-    <div class="header-left">
-      <!--<img src="logo-ies.png" alt="Logo IES" class="ies-logo">-->
-      <span class="session-text">
-        Sesión iniciada como <strong id="user-email"></strong>
-      </span>
-    </div>
-
-    <button id="btn-logout" type="button" class="btn-logout">Cerrar sesión</button>
-  </header>
-  <hr/>
-  <div class="app-grid">
-    <!-- Columna izquierda: formulario de NUEVA ausencia -->
-    <section id="form-section">
-      <h2>Registrar nueva ausencia</h2>
-<ul>
-        <li>📅 <strong>Una fecha</strong> → crea una ausencia individual.</li>
-        <li>🗓️ <strong>Con "Fecha hasta"</strong> → se genera una ausencia por cada día en el rango indicado.</li>
-      </ul>
-      <form id="absence-form">
+    <section id="login-section" v-if="!isLoggedIn">
+      <h2>Acceso</h2>
+      <form @submit.prevent="handleLogin">
         <label>
-          Docente
-          <select id="teacher-select" required>
-            <option value="">Selecciona…</option>
-          </select>
+          Correo
+          <input type="email" v-model="loginForm.email" required />
         </label>
-
         <label>
-          Fecha desde
-          <input type="date" id="date-from" required />
+          Contraseña
+          <input type="password" v-model="loginForm.password" required />
         </label>
-
-        <label>
-          Fecha hasta (opcional)
-          <input type="date" id="date-to" />
-        </label>
-
-        <label>
-          Hora inicial (tramo)
-          <select id="start-slot" required>
-            <option value="1" selected>08:15–09:15</option>
-            <option value="2">09:15–10:15</option>
-            <option value="3">10:15–11:15</option>
-            <option value="4">11:15–11:45 (recreo)</option>
-            <option value="5">11:45–12:45</option>
-            <option value="6">12:45–13:45</option>
-            <option value="7">13:45–14:45</option>
-            <option value="8">15:00–16:00</option>
-            <option value="9">16:00–17:00</option>
-            <option value="10">17:00–18:00</option>
-            <option value="11">18:00–18:15 (recreo)</option>
-            <option value="12">18:15–19:15</option>
-            <option value="13">19:15–20:15</option>
-            <option value="14">20:15–21:15</option>
-          </select>
-        </label>
-
-        <label>
-          Hora final (tramo)
-          <select id="end-slot" required>
-            <option value="1">08:15–09:15</option>
-            <option value="2">09:15–10:15</option>
-            <option value="3">10:15–11:15</option>
-            <option value="4">11:15–11:45 (recreo)</option>
-            <option value="5">11:45–12:45</option>
-            <option value="6">12:45–13:45</option>
-            <option value="7">13:45–14:45</option>
-            <option value="8">15:00–16:00</option>
-            <option value="9">16:00–17:00</option>
-            <option value="10">17:00–18:00</option>
-            <option value="11">18:00–18:15 (recreo)</option>
-            <option value="12">18:15–19:15</option>
-            <option value="13">19:15–20:15</option>
-            <option value="14" selected>20:15–21:15</option>
-          </select>
-        </label>
-
-        <label>
-          Motivo (opcional)
-          <textarea id="reason" rows="2"></textarea>
-        </label>
-
-<button type="submit" class="btn-save">Guardar ausencia</button>
-        <div id="absence-message" class="message hidden"></div>
+        <button type="submit">Entrar</button>
+        <div v-if="loginMessage" class="message" :class="loginMessageType">{{ loginMessage }}</div>
       </form>
     </section>
 
-    <!-- Columna derecha: selector de fecha + lista de ausencias -->
-    <section id="list-section">
-      <h2>Ausencias del día</h2>
-      <label>
-        Fecha
-        <input type="date" id="list-date" />
-      </label>
-<button type="button" id="btn-refresh-list" class="btn-refresh">Actualizar</button>
+    <section id="app-section" v-else>
+      <header class="app-header">
+        <div class="header-left">
+          <span class="session-text">
+            Sesión iniciada como <strong>{{ userEmail }}</strong>
+          </span>
+        </div>
+        <button id="btn-logout" type="button" class="btn-logout" @click="handleLogout">Cerrar sesión</button>
+      </header>
 
-      <div id="list-container" style="margin-top: 0.75rem;"></div>
+      <nav class="top-nav">
+        <button
+          v-for="item in menuItems"
+          :key="item.value"
+          type="button"
+          class="nav-link"
+          :class="{ active: activeMenu === item.value }"
+          @click="activeMenu = item.value"
+        >
+          {{ item.label }}
+        </button>
+      </nav>
+
+      <div v-show="activeMenu === 'ausencias'">
+        <div class="app-grid">
+          <section id="form-section">
+            <h2>Registro de ausencias</h2>
+            <ul>
+              <li>📅 <strong>Una fecha</strong> → crea una ausencia individual.</li>
+              <li>🗓️ <strong>Con "Fecha hasta"</strong> → se genera una ausencia por cada día en el rango indicado.</li>
+            </ul>
+            <form id="absence-form" @submit.prevent="handleAbsenceSubmit">
+              <label>
+                Docente
+                <select v-model="absenceForm.teacher" required>
+                  <option value="">Selecciona…</option>
+                  <option v-for="teacher in teachers" :key="teacher.name" :value="teacher.name">{{ teacher.name }}</option>
+                </select>
+              </label>
+
+              <label>
+                Fecha desde
+                <input type="date" v-model="absenceForm.dateFrom" required />
+              </label>
+
+              <label>
+                Fecha hasta (opcional)
+                <input type="date" v-model="absenceForm.dateTo" />
+              </label>
+
+              <label>
+                Hora inicial (tramo)
+                <select v-model.number="absenceForm.startSlot" required>
+                  <option v-for="slot in slotOptions" :key="slot.value" :value="slot.value">{{ slot.label }}</option>
+                </select>
+              </label>
+
+              <label>
+                Hora final (tramo)
+                <select v-model.number="absenceForm.endSlot" required>
+                  <option v-for="slot in slotOptions" :key="`end-${slot.value}`" :value="slot.value">{{ slot.label }}</option>
+                </select>
+              </label>
+
+              <label>
+                Motivo (opcional)
+                <textarea v-model="absenceForm.reason" rows="2"></textarea>
+              </label>
+
+              <button type="submit" class="btn-save">Guardar ausencia</button>
+              <div v-if="absenceMessage" class="message" :class="absenceMessageType">{{ absenceMessage }}</div>
+            </form>
+          </section>
+
+          <section id="list-section">
+            <h2>Ausencias del día</h2>
+            <label>
+              Fecha
+              <input type="date" v-model="listDate" />
+            </label>
+            <button type="button" id="btn-refresh-list" class="btn-refresh" @click="loadAbsencesForDate">Actualizar</button>
+
+            <div id="list-container" class="absence-list">
+              <p v-if="loadingAbsences">Cargando ausencias…</p>
+              <p v-else-if="!absences.length">No hay ausencias registradas para este día.</p>
+              <article v-for="absence in absences" :key="absence.id" class="absence-item">
+                <div class="absence-main" @click="toggleAbsenceEdit(absence)">
+                  <strong>{{ absence.teacher_name }}</strong>
+                  <div class="absence-meta">{{ formatSlotLabel(absence.start_slot, absence.end_slot) }}</div>
+                  <div v-if="absence.reason" class="absence-meta">Motivo: {{ absence.reason }}</div>
+                </div>
+                <div class="absence-actions">
+                  <button type="button" class="btn-delete" @click="deleteAbsence(absence.id)">Eliminar</button>
+                </div>
+                <div class="absence-edit" v-if="absence.editing">
+                  <p class="absence-edit-title">Editar tramos</p>
+                  <div class="absence-edit-controls">
+                    <select v-model.number="absence.editStart">
+                      <option v-for="slot in slotOptions" :key="`edit-start-${slot.value}`" :value="slot.value">{{ slot.label }}</option>
+                    </select>
+                    <select v-model.number="absence.editEnd">
+                      <option v-for="slot in slotOptions" :key="`edit-end-${slot.value}`" :value="slot.value">{{ slot.label }}</option>
+                    </select>
+                  </div>
+                  <div class="absence-edit-buttons">
+                    <button type="button" class="btn-save" @click="saveAbsenceSlots(absence)">Guardar</button>
+                    <button type="button" @click="cancelAbsenceEdit(absence)">Cancelar</button>
+                  </div>
+                  <div
+                    v-if="absence.editMessage"
+                    class="absence-edit-message"
+                    :class="absence.editMessageType"
+                  >
+                    {{ absence.editMessage }}
+                  </div>
+                </div>
+              </article>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <section id="substitutions-section" v-show="activeMenu === 'sustituciones'">
+        <h2>🔁 Gestión de sustituciones</h2>
+        <p>
+          En caso de sustitución, las ausencias enviadas desde el formulario deben mostrar el nombre correcto en el panel del centro.
+          Indica siempre el cambio respecto al <strong>docente titular</strong> y revierte la sustitución cuando finalice.
+        </p>
+        <p>Puede revertir la sustitución con el botón “Quitar sustituto”.</p>
+
+        <div class="substitutions-layout">
+          <div class="substitutions-block">
+            <h3>Sustituciones activas</h3>
+            <p class="absence-meta">Si el correo del formulario es distinto al del titular, se considera que hay una sustitución activa.</p>
+            <table class="substitutions-table" v-if="substitutions.length">
+              <thead>
+                <tr>
+                  <th>Titular</th>
+                  <th>Nombre en panel</th>
+                  <th>Email formulario</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in substitutions" :key="row.email">
+                  <td>{{ row.name }}</td>
+                  <td>{{ row.display_name || row.name }}</td>
+                  <td>{{ row.email_form }}</td>
+                  <td>
+                    <button type="button" class="btn-delete" @click="removeSubstitution(row)">Quitar sustituto</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <p id="substitutions-empty" class="absence-meta" v-else>No hay sustituciones activas.</p>
+          </div>
+
+          <div class="substitutions-block">
+            <h3>Añadir / cambiar sustituto</h3>
+            <form id="substitution-form" @submit.prevent="handleSubstitutionSubmit">
+              <label>
+                Profesor titular
+                <select v-model="substitutionForm.teacher" required>
+                  <option value="">Selecciona titular…</option>
+                  <option v-for="teacher in substitutionTeachers" :key="teacher.name" :value="teacher.name">{{ teacher.name }}</option>
+                </select>
+              </label>
+
+              <label>
+                Nombre que se mostrará en el panel (Apellidos, Nombre)
+                <input type="text" v-model="substitutionForm.displayName" required />
+              </label>
+
+              <label>
+                Email del sustituto
+                <input type="email" v-model="substitutionForm.emailForm" required />
+              </label>
+
+              <button type="submit" class="btn-save">Guardar sustitución</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section id="help-section" v-show="activeMenu === 'ayuda'">
+        <h2>Ayuda y buenas prácticas</h2>
+        <article class="help-block">
+          <h3>Cuándo registrar una ausencia</h3>
+          <ul>
+            <li>Usa el formulario de “Registro de ausencias” para comunicar ausencias planificadas o sobrevenidas.</li>
+            <li>Para ausencias de varios días, utiliza los campos <strong>Fecha desde</strong> y <strong>Fecha hasta</strong>. El sistema genera un registro diario.</li>
+            <li>Completa los tramos horarios afectados. Puedes modificarlos posteriormente desde la lista de ausencias.</li>
+          </ul>
+        </article>
+
+        <article class="help-block">
+          <h3>Consulta de ausencias por fecha</h3>
+          <ul>
+            <li>Selecciona un día en “Ausencias del día” y pulsa <strong>Actualizar</strong> para ver los registros ordenados por docente.</li>
+            <li>Pulsa sobre una ausencia para editar los tramos y usa el botón rojo para eliminarla si ha sido un error.</li>
+            <li>La información sensible (motivos) nunca aparece en los paneles públicos, solo en esta vista protegida.</li>
+          </ul>
+        </article>
+
+        <article class="help-block">
+          <h3>Gestión de sustituciones</h3>
+          <ul>
+            <li>El panel de clases a cubrir identifica automáticamente una sustitución cuando el correo del formulario difiere del titular.</li>
+            <li>Desde la pestaña “Sustituciones” puedes asignar el nombre y correo del sustituto para que el panel muestre los datos correctos.</li>
+            <li>Cuando el titular se reincorpore, usa “Quitar sustituto” para volver a mostrar su nombre y correo.</li>
+          </ul>
+        </article>
+
+        <article class="help-block">
+          <h3>Seguridad y acceso</h3>
+          <ul>
+            <li>El acceso se realiza mediante Supabase Auth. No compartas tu cuenta.</li>
+            <li>Las tablas `teachers`, `absences` y el horario están protegidos con RLS en Supabase para evitar accesos no autorizados.</li>
+            <li>El panel público solo expone la información imprescindible para la organización diaria.</li>
+          </ul>
+        </article>
+      </section>
     </section>
   </div>
-  <hr/>
-    <section id="substitutions-section">
-    <h2>🔁 Gestión de sustituciones</h2>
-      <p>
-  En caso de sustitución, es necesario que las ausencias enviadas desde el formulario del centro se registren correctamente y que aparezca el nombre correcto en el panel general. Si el docente sustituto es asimismo sustituido, deberá indicarse el cambio siempre con respecto al <strong>docente titular</strong>.
-</p><p>Puede revertir la sustitución con el botón “Quitar sustituto”.</p>
 
-    <div class="substitutions-layout">
-      <!-- Bloque izquierda: sustituciones activas -->
-      <div class="substitutions-block">
-        <h3>Sustituciones activas</h3>
-        <p class="absence-meta">Si el correo del formulario es distinto al del titular, se considera que hay una sustitución activa.</p>
-        <table class="substitutions-table">
-          <thead>
-            <tr>
-              <th>Titular</th>
-              <th>Nombre en panel</th>
-              <th>Email formulario</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="substitutions-body">
-            <!-- Aquí se inyectarán las filas por JS -->
-          </tbody>
-        </table>
-        <p id="substitutions-empty" class="absence-meta" style="margin-top:0.4rem; display:none;">
-          No hay sustituciones activas.
-        </p>
-      </div>
-
-      <!-- Bloque derecha: añadir sustituto -->
-      <div class="substitutions-block">
-        <h3>Añadir / cambiar sustituto</h3>
-        <form id="substitution-form">
-          <label>
-            Profesor titular
-            <select id="substitution-teacher-select" required>
-              <option value="">Selecciona titular…</option>
-            </select>
-          </label>
-
-          <label>
-            Nombre que se mostrará en el panel (Apellidos, Nombre)
-            <input type="text" id="substitution-display-name" required />
-          </label>
-
-          <label>
-            Email del sustituto
-            <input type="email" id="substitution-email-form" required value="@iespoligonosur.org"/>
-          </label>
-
-          <button type="submit" class="btn-save">Guardar sustitución</button>
-        </form>
-      </div>
-    </div>
-  </section>
-
-</section>
-
-  <!-- Supabase JS desde CDN -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-   <script src="script.js"></script>
-    
+  <script src="script.js"></script>
 </body>
 </html>
-

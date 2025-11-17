@@ -1,23 +1,33 @@
 body {
-      font-family: system-ui, sans-serif;
-      max-width: 80vw;
-      margin: 0 auto;
-      padding: 1rem;
-	  background-color:white;
-    }
-    h1 { font-size: 1.3rem; }
-    form { margin-bottom: 1.5rem; }
-    label { display: block; margin-top: 0.75rem; }
-    input, select, textarea, button {
-      width: 100%;
-      padding: 0.4rem;
-      font-size: 1rem;
-      box-sizing: border-box;
-    }
-    button {
-      margin-top: 1rem;
-      cursor: pointer;
-    }
+  font-family: system-ui, sans-serif;
+  max-width: 90vw;
+  margin: 0 auto;
+  padding: 1rem;
+  background-color: #f6f7f9;
+}
+h1 {
+  font-size: 1.3rem;
+}
+form {
+  margin-bottom: 1.5rem;
+}
+label {
+  display: block;
+  margin-top: 0.75rem;
+}
+input,
+select,
+textarea {
+  width: 100%;
+  padding: 0.4rem;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+button {
+  width: auto;
+  margin-top: 1rem;
+  cursor: pointer;
+}
     .hidden { display: none; }
     .message {
       margin-top: 0.75rem;
@@ -28,7 +38,28 @@ body {
     .message.ok { background: #e0ffe0; }
     .message.error { background: #ffe0e0; }
 	
-	/* Layout principal dentro de #app-section */
+/* Menú principal */
+.top-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.nav-link {
+  background: #e3e8ef;
+  color: #1f2a37;
+  border: 1px solid transparent;
+  margin-top: 0;
+}
+
+.nav-link.active {
+  background: #1e88e5;
+  color: #fff;
+  border-color: #166fbe;
+}
+
+/* Layout principal dentro de #app-section */
 .app-grid {
   display: flex;
   flex-direction: column;
@@ -41,6 +72,10 @@ body {
   padding: 0.8rem;
   border-radius: 8px;
   box-shadow: 0 0 6px rgba(0,0,0,0.06);
+}
+
+.absence-list {
+  margin-top: 0.75rem;
 }
 
 /* Tarjetas de ausencias */
@@ -242,6 +277,22 @@ button:active {
 
 .btn-logout:active {
   transform: scale(0.97);
+}
+
+.help-block {
+  background: #ffffff;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  box-shadow: 0 0 6px rgba(0,0,0,0.06);
+  margin-bottom: 1rem;
+}
+
+.help-block h3 {
+  margin-top: 0;
+}
+
+.help-block ul {
+  padding-left: 1.2rem;
 }
 
 /* ================================
