@@ -70,12 +70,42 @@
 
         <label>
           Hora inicial (tramo)
-          <input type="number" id="start-slot" min="1" max="14" value="1" required />
+          <select id="start-slot" required>
+            <option value="1" selected>08:15–09:15</option>
+            <option value="2">09:15–10:15</option>
+            <option value="3">10:15–11:15</option>
+            <option value="4">11:15–11:45 (recreo)</option>
+            <option value="5">11:45–12:45</option>
+            <option value="6">12:45–13:45</option>
+            <option value="7">13:45–14:45</option>
+            <option value="8">15:00–16:00</option>
+            <option value="9">16:00–17:00</option>
+            <option value="10">17:00–18:00</option>
+            <option value="11">18:00–18:15 (recreo)</option>
+            <option value="12">18:15–19:15</option>
+            <option value="13">19:15–20:15</option>
+            <option value="14">20:15–21:15</option>
+          </select>
         </label>
 
         <label>
           Hora final (tramo)
-          <input type="number" id="end-slot" min="1" max="14" value="14" required />
+          <select id="end-slot" required>
+            <option value="1">08:15–09:15</option>
+            <option value="2">09:15–10:15</option>
+            <option value="3">10:15–11:15</option>
+            <option value="4">11:15–11:45 (recreo)</option>
+            <option value="5">11:45–12:45</option>
+            <option value="6">12:45–13:45</option>
+            <option value="7">13:45–14:45</option>
+            <option value="8">15:00–16:00</option>
+            <option value="9">16:00–17:00</option>
+            <option value="10">17:00–18:00</option>
+            <option value="11">18:00–18:15 (recreo)</option>
+            <option value="12">18:15–19:15</option>
+            <option value="13">19:15–20:15</option>
+            <option value="14" selected>20:15–21:15</option>
+          </select>
         </label>
 
         <label>
