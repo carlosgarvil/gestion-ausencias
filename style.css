@@ -318,6 +318,73 @@ button:active {
   box-shadow: 0 0 6px rgba(0,0,0,0.06);
 }
 
+#justifications-section {
+  margin-top: 1.5rem;
+  background: #ffffff;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  box-shadow: 0 0 6px rgba(0,0,0,0.06);
+}
+
+#justifications-section h2 {
+  margin: 0;
+}
+
+.justifications-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.justifications-content {
+  margin-top: 1rem;
+}
+
+.justifications-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.justifications-table th,
+.justifications-table td {
+  border: 1px solid #ddd;
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+}
+
+.justifications-table th {
+  background: #f5f5f5;
+}
+
+.month-picker input[type="month"] {
+  min-width: 12rem;
+}
+
+.status-select {
+  min-width: 10rem;
+}
+
+.status-message {
+  display: block;
+  font-size: 0.75rem;
+  margin-top: 0.2rem;
+}
+
+.status-message.ok {
+  color: #2e8b57;
+}
+
+.status-message.error {
+  color: #c62828;
+}
+
+.status-message.info {
+  color: #1e88e5;
+}
+
 #substitutions-section h2 {
   margin-top: 0;
   margin-bottom: 0.8rem;
