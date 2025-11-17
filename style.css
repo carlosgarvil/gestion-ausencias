@@ -74,6 +74,57 @@ body {
   font-size: 0.85rem;
 }
 
+.absence-edit {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  border-top: 1px solid #e0e0e0;
+  background: #fff;
+  border-radius: 4px;
+}
+
+.absence-edit-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin: 0 0 0.4rem 0;
+}
+
+.absence-edit-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.absence-edit-controls select {
+  width: 100%;
+}
+
+.absence-edit-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.absence-edit-buttons button {
+  flex: 1;
+}
+
+.absence-edit-message {
+  margin-top: 0.4rem;
+  font-size: 0.8rem;
+}
+
+.absence-edit-message.ok {
+  color: #2e8b57;
+}
+
+.absence-edit-message.error {
+  color: #c62828;
+}
+
+.absence-edit-message.info {
+  color: #1565c0;
+}
+
 /* Responsive: dos columnas en pantallas anchas */
 @media (min-width: 768px) {
   .app-grid {
