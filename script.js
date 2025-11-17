@@ -4,6 +4,23 @@
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtibHVodm9yZmxkcHRiY253dnZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNDIxNjIsImV4cCI6MjA3ODYxODE2Mn0.WUeTibJHnmVCsNqcwvzsUdFpsTn8BzjM-W7eZCRaZ7I";         // <-- RELLENA
     const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+    const SLOT_OPTIONS = [
+      { value: 1, label: "08:15–09:15" },
+      { value: 2, label: "09:15–10:15" },
+      { value: 3, label: "10:15–11:15" },
+      { value: 4, label: "11:15–11:45 (recreo)" },
+      { value: 5, label: "11:45–12:45" },
+      { value: 6, label: "12:45–13:45" },
+      { value: 7, label: "13:45–14:45" },
+      { value: 8, label: "15:00–16:00" },
+      { value: 9, label: "16:00–17:00" },
+      { value: 10, label: "17:00–18:00" },
+      { value: 11, label: "18:00–18:15 (recreo)" },
+      { value: 12, label: "18:15–19:15" },
+      { value: 13, label: "19:15–20:15" },
+      { value: 14, label: "20:15–21:15" }
+    ];
+
     const loginSection = document.getElementById("login-section");
     const appSection = document.getElementById("app-section");
     const loginForm = document.getElementById("login-form");
@@ -310,19 +327,126 @@ function renderAbsenceList(rows) {
     const actions = document.createElement("div");
     actions.className = "absence-actions";
 
-const btnDel = document.createElement("button");
-btnDel.type = "button";
-btnDel.textContent = "Eliminar";
-btnDel.dataset.id = row.id;
-btnDel.className = "btn-delete";
+    const btnDel = document.createElement("button");
+    btnDel.type = "button";
+    btnDel.textContent = "Eliminar";
+    btnDel.dataset.id = row.id;
+    btnDel.dataset.action = "delete";
+    btnDel.className = "btn-delete";
 
 
     actions.appendChild(btnDel);
 
+    const editContainer = document.createElement("div");
+    editContainer.className = "absence-edit hidden";
+
+    const editTitle = document.createElement("p");
+    editTitle.className = "absence-edit-title";
+    editTitle.textContent = "Editar tramos";
+    editContainer.appendChild(editTitle);
+
+    const controls = document.createElement("div");
+    controls.className = "absence-edit-controls";
+
+    const startSelect = createSlotSelect(row.start_slot, "edit-start-slot");
+    const endSelect = createSlotSelect(row.end_slot, "edit-end-slot");
+    controls.appendChild(startSelect);
+    controls.appendChild(endSelect);
+
+    const buttonsWrapper = document.createElement("div");
+    buttonsWrapper.className = "absence-edit-buttons";
+
+    const btnSave = document.createElement("button");
+    btnSave.type = "button";
+    btnSave.textContent = "Guardar";
+    btnSave.dataset.id = row.id;
+    btnSave.dataset.action = "save";
+    btnSave.className = "btn-save";
+
+    const btnCancel = document.createElement("button");
+    btnCancel.type = "button";
+    btnCancel.textContent = "Cancelar";
+    btnCancel.dataset.action = "cancel";
+
+    buttonsWrapper.appendChild(btnSave);
+    buttonsWrapper.appendChild(btnCancel);
+
+    const editMessage = document.createElement("div");
+    editMessage.className = "absence-edit-message hidden";
+
+    editContainer.appendChild(controls);
+    editContainer.appendChild(buttonsWrapper);
+    editContainer.appendChild(editMessage);
+
     div.appendChild(main);
     div.appendChild(actions);
+    div.appendChild(editContainer);
     listContainer.appendChild(div);
   });
+}
+
+function createSlotSelect(selectedValue, className) {
+  const select = document.createElement("select");
+  select.className = className;
+  SLOT_OPTIONS.forEach(option => {
+    const opt = document.createElement("option");
+    opt.value = String(option.value);
+    opt.textContent = option.label;
+    select.appendChild(opt);
+  });
+  select.value = String(selectedValue);
+  return select;
+}
+
+function toggleAbsenceEdit(item, forceShow = null) {
+  if (!item) return;
+  const edit = item.querySelector(".absence-edit");
+  if (!edit) return;
+
+  const shouldShow = forceShow === null ? edit.classList.contains("hidden") : forceShow;
+
+  if (listContainer) {
+    listContainer.querySelectorAll(".absence-edit").forEach(panel => {
+      if (panel !== edit) panel.classList.add("hidden");
+    });
+  }
+
+  if (shouldShow) {
+    edit.classList.remove("hidden");
+  } else {
+    edit.classList.add("hidden");
+  }
+}
+
+function setAbsenceEditMessage(item, text, type = "") {
+  const message = item.querySelector(".absence-edit-message");
+  if (!message) return;
+  if (!text) {
+    message.textContent = "";
+    message.className = "absence-edit-message hidden";
+    return;
+  }
+
+  message.textContent = text;
+  message.className = `absence-edit-message ${type}`;
+}
+
+async function updateAbsenceSlots(id, startSlot, endSlot, item) {
+  if (!item) return;
+  setAbsenceEditMessage(item, "Guardando cambios…", "info");
+
+  const { error } = await client
+    .from("absences")
+    .update({ start_slot: startSlot, end_slot: endSlot })
+    .eq("id", id);
+
+  if (error) {
+    setAbsenceEditMessage(item, "Error al guardar: " + error.message, "error");
+    return;
+  }
+
+  setAbsenceEditMessage(item, "Cambios guardados", "ok");
+  await loadAbsencesForSelectedDate();
 }
 
 async function deleteAbsence(id) {
@@ -415,15 +539,45 @@ if (listDateInput) {
   });
 }
 
-// Delegación de eventos para los botones "Eliminar"
+// Delegación de eventos para acciones dentro de la lista de ausencias
 listContainer.addEventListener("click", (e) => {
-  const btn = e.target.closest("button[data-id]");
-  if (!btn) return;
-  const id = parseInt(btn.dataset.id, 10);
-  if (!Number.isNaN(id)) {
-    if (confirm("¿Eliminar esta ausencia?")) {
-      deleteAbsence(id);
+  const actionBtn = e.target.closest("button[data-action]");
+  if (actionBtn) {
+    const id = parseInt(actionBtn.dataset.id, 10);
+    const action = actionBtn.dataset.action;
+    const item = actionBtn.closest(".absence-item");
+
+    if (action === "delete" && !Number.isNaN(id)) {
+      if (confirm("¿Eliminar esta ausencia?")) {
+        deleteAbsence(id);
+      }
+      return;
     }
+
+    if (action === "cancel" && item) {
+      toggleAbsenceEdit(item, false);
+      setAbsenceEditMessage(item, "");
+      return;
+    }
+
+    if (action === "save" && item && !Number.isNaN(id)) {
+      const startSlot = parseInt(item.querySelector(".edit-start-slot").value, 10);
+      const endSlot = parseInt(item.querySelector(".edit-end-slot").value, 10);
+
+      if (endSlot < startSlot) {
+        setAbsenceEditMessage(item, "La hora final no puede ser menor que la inicial.", "error");
+        return;
+      }
+
+      updateAbsenceSlots(id, startSlot, endSlot, item);
+      return;
+    }
+  }
+
+  const main = e.target.closest(".absence-main");
+  if (main) {
+    const item = main.closest(".absence-item");
+    toggleAbsenceEdit(item);
   }
 });
 
