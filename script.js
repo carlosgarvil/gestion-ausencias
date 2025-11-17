@@ -23,7 +23,7 @@ const SLOT_OPTIONS = [
 
 const MENU_ITEMS = [
   { value: "ausencias", label: "Ausencias" },
-  { value: "justificaciones", label: "Justificaciones" },
+  { value: "justificaciones", label: "Justificantes" },
   { value: "sustituciones", label: "Sustituciones" },
   { value: "ayuda", label: "Ayuda" }
 ];
