@@ -78,3 +78,11 @@ Incluye:
 ```bash
 git clone https://github.com/xxxx/gestion-ausencias.git
 cd gestion-ausencias
+```
+
+## 🔀 Ramas de trabajo
+
+- `dev`: rama base con la versión clásica en JavaScript vanilla.
+- `vue`: rama creada a partir de `dev` para la migración completa a Vue 3 y la nueva navegación por pestañas.
+
+Cada nueva iteración de la interfaz debe salir de `dev` (por ejemplo, `git checkout dev && git checkout -b vue-v2`) para mantener la rama base libre de cambios experimentales.
