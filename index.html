@@ -148,6 +148,64 @@
         </div>
       </div>
 
+      <section id="justifications-section" v-show="activeMenu === 'justificaciones'">
+        <div class="justifications-header">
+          <h2>📋 Justificaciones</h2>
+          <label class="month-picker">
+            Mes
+            <input type="month" v-model="justificationsMonth" />
+          </label>
+        </div>
+
+        <div class="justifications-content">
+          <p v-if="loadingJustifications">Cargando ausencias…</p>
+          <p v-else-if="justificationsMessage">{{ justificationsMessage }}</p>
+          <p v-else-if="!justifications.length">No hay ausencias registradas para este mes.</p>
+
+          <table v-else class="justifications-table">
+            <thead>
+              <tr>
+                <th>Docente</th>
+                <th>Fecha</th>
+                <th>Inicio</th>
+                <th>Fin</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="justification in justifications" :key="justification.id">
+                <td>{{ justification.teacher_name }}</td>
+                <td>{{ formatDateForDisplay(justification.date) }}</td>
+                <td>{{ justification.start_slot }}</td>
+                <td>{{ justification.end_slot }}</td>
+                <td>
+                  <select
+                    class="status-select"
+                    :value="justification.status"
+                    @change="updateJustificationStatus(justification, $event.target.value)"
+                  >
+                    <option
+                      v-for="option in justificationStatusOptions"
+                      :key="option.value"
+                      :value="option.value"
+                    >
+                      {{ option.label }}
+                    </option>
+                  </select>
+                  <span
+                    v-if="justification.statusMessage"
+                    class="status-message"
+                    :class="justification.statusMessageType"
+                  >
+                    {{ justification.statusMessage }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <section id="substitutions-section" v-show="activeMenu === 'sustituciones'">
         <h2>🔁 Gestión de sustituciones</h2>
         <p>
