@@ -318,6 +318,73 @@ button:active {
   box-shadow: 0 0 6px rgba(0,0,0,0.06);
 }
 
+#justifications-section {
+  margin-top: 1.5rem;
+  background: #ffffff;
+  padding: 0.8rem 1rem;
+  border-radius: 8px;
+  box-shadow: 0 0 6px rgba(0,0,0,0.06);
+}
+
+#justifications-section h2 {
+  margin: 0;
+}
+
+.justifications-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.justifications-content {
+  margin-top: 1rem;
+}
+
+.justifications-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.justifications-table th,
+.justifications-table td {
+  border: 1px solid #ddd;
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+}
+
+.justifications-table th {
+  background: #f5f5f5;
+}
+
+.month-picker input[type="month"] {
+  min-width: 12rem;
+}
+
+.status-select {
+  min-width: 10rem;
+}
+
+.status-message {
+  display: block;
+  font-size: 0.75rem;
+  margin-top: 0.2rem;
+}
+
+.status-message.ok {
+  color: #2e8b57;
+}
+
+.status-message.error {
+  color: #c62828;
+}
+
+.status-message.info {
+  color: #1e88e5;
+}
+
 #substitutions-section h2 {
   margin-top: 0;
   margin-bottom: 0.8rem;
@@ -360,10 +427,129 @@ button:active {
   text-align: left;
 }
 
-/* Responsive: dos columnas en pantallas anchas */
-@media (min-width: 768px) {
-  .substitutions-layout {
+/* Diseño: celdas "striped" para mejor lectura (filas y efecto vertical sutil) */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.95rem;
+}
+
+/* Cabecera */
+table th {
+  background: #f3f6fb;
+  color: #0b2545;
+  text-align: left;
+  padding: 0.6rem 0.8rem;
+  border-bottom: 1px solid #e6eef8;
+}
+
+/* Celdas */
+table td {
+  padding: 0.55rem 0.8rem;
+  border-bottom: 1px solid #eef4fb;
+  vertical-align: middle;
+}
+
+/* Rayado por filas (zebra) */
+.justifications-table tbody tr:nth-child(odd) td,
+.substitutions-table tbody tr:nth-child(odd) td,
+table tbody tr:nth-child(odd) td {
+  background-color: #ffffff;
+}
+
+.justifications-table tbody tr:nth-child(even) td,
+.substitutions-table tbody tr:nth-child(even) td,
+table tbody tr:nth-child(even) td {
+  background-color: #ebebeb; /* sutil contraste */
+}
+
+/* Rayado vertical sutil por columnas (opcional: mejora lectura en tablas anchas) */
+.justifications-table tbody td:nth-child(odd),
+.substitutions-table tbody td:nth-child(odd),
+table tbody td:nth-child(odd) {
+  /* color muy sutil para no competir con el rayado por filas */
+  background-image: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,255,255,0));
+}
+
+/* Hover para destacar fila */
+table tbody tr:hover td {
+  background-color: #e9f3ff;
+  transition: background-color 120ms ease;
+}
+
+/* Ajustes para selects y mensajes en la columna de estado */
+.status-select {
+  padding: 0.25rem 0.4rem;
+  border-radius: 4px;
+  border: 1px solid #cfe3ff;
+  background: #fff;
+  font-size: 0.95rem;
+}
+
+.status-message {
+  display: inline-block;
+  margin-left: 0.6rem;
+  padding: 0.18rem 0.45rem;
+  border-radius: 3px;
+  font-size: 0.85rem;
+}
+
+/* Contrastes para mensajes de estado (ejemplo: aprobado / rechazado) */
+.status-message.success {
+  background: #e6fbf0;
+  color: #0a6b3b;
+  border: 1px solid #d1f3db;
+}
+
+.status-message.error {
+  background: #fff3f2;
+  color: #c62828;
+  border: 1px solid #f5dcdc;
+}
+
+.status-message.info {
+  background: #e3f2fd;
+  color: #1565c0;
+  border: 1px solid #bbdefb;
+}
+
+/* Responsive: ajustes adicionales para pantallas pequeñas */
+@media (max-width: 768px) {
+  .app-grid {
+    flex-direction: column;
+  }
+  .absence-item {
+    flex-direction: column;
+  }
+  .absence-meta {
+    order: -1;
+    margin-bottom: 0.5rem;
+  }
+  .absence-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .absence-edit {
+    padding: 0.8rem;
+  }
+  .absence-edit-controls {
     flex-direction: row;
-    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+  .absence-edit-buttons {
+    width: 100%;
+    flex-direction: row;
+    gap: 0.4rem;
+  }
+  .absence-edit-message {
+    text-align: center;
+  }
+  .justifications-table,
+  .substitutions-table {
+    font-size: 0.85rem;
+  }
+  .status-select {
+    width: 100%;
   }
 }

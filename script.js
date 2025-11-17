@@ -23,8 +23,15 @@ const SLOT_OPTIONS = [
 
 const MENU_ITEMS = [
   { value: "ausencias", label: "Ausencias" },
+  { value: "justificaciones", label: "Justificantes" },
   { value: "sustituciones", label: "Sustituciones" },
   { value: "ayuda", label: "Ayuda" }
+];
+
+const JUSTIFICATION_STATUS_OPTIONS = [
+  { value: "Sin justificar", label: "Sin justificar" },
+  { value: "Justificado", label: "Justificado" },
+  { value: "Aviso", label: "Aviso" }
 ];
 
 const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -37,11 +44,19 @@ function getTodayISO() {
   return `${year}-${month}-${day}`;
 }
 
+function getCurrentMonthValue() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+}
+
 createApp({
   data() {
     return {
       menuItems: MENU_ITEMS,
       slotOptions: SLOT_OPTIONS,
+      justificationStatusOptions: JUSTIFICATION_STATUS_OPTIONS,
       activeMenu: "ausencias",
       isLoggedIn: false,
       userEmail: "",
@@ -66,6 +81,10 @@ createApp({
       loadingAbsences: false,
       absenceMessage: "",
       absenceMessageType: "",
+      justificationsMonth: getCurrentMonthValue(),
+      justifications: [],
+      loadingJustifications: false,
+      justificationsMessage: "",
       substitutions: [],
       substitutionForm: {
         teacher: "",
@@ -81,6 +100,11 @@ createApp({
     listDate(newValue, oldValue) {
       if (newValue && newValue !== oldValue && this.isLoggedIn) {
         this.loadAbsencesForDate();
+      }
+    },
+    justificationsMonth(newValue, oldValue) {
+      if (newValue && newValue !== oldValue && this.isLoggedIn) {
+        this.loadJustifications();
       }
     }
   },
@@ -133,7 +157,11 @@ createApp({
       this.isLoggedIn = false;
       this.userEmail = "";
       this.absences = [];
+      this.justifications = [];
       this.substitutions = [];
+      this.loadingJustifications = false;
+      this.justificationsMessage = "";
+      this.justificationsMonth = getCurrentMonthValue();
       this.loginForm.password = "";
       this.activeMenu = "ausencias";
     },
@@ -147,6 +175,7 @@ createApp({
       await Promise.all([this.populateTeachers(), this.populateSubstitutionTeachers()]);
       this.setTodayDefaults();
       await this.loadAbsencesForDate();
+      await this.loadJustifications();
       await this.loadActiveSubstitutions();
     },
     async populateTeachers() {
@@ -277,11 +306,74 @@ createApp({
       }));
       this.loadingAbsences = false;
     },
+    getMonthDateRange(monthValue) {
+      if (!monthValue) return null;
+      const [year, month] = monthValue.split("-");
+      if (!year || !month) return null;
+      const start = new Date(Number(year), Number(month) - 1, 1);
+      if (Number.isNaN(start.getTime())) return null;
+      const nextMonth = new Date(start);
+      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      const startDate = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-01`;
+      const exclusiveEndDate = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, "0")}-01`;
+      return { startDate, exclusiveEndDate };
+    },
+    async loadJustifications() {
+      if (!this.justificationsMonth) {
+        this.justificationsMonth = getCurrentMonthValue();
+      }
+
+      const range = this.getMonthDateRange(this.justificationsMonth);
+      if (!range) {
+        this.justificationsMessage = "Selecciona un mes válido.";
+        this.justifications = [];
+        return;
+      }
+
+      this.loadingJustifications = true;
+      this.justificationsMessage = "";
+
+      const { data, error } = await client
+        .from("absences")
+        .select("id, teacher_name, date, start_slot, end_slot, status")
+        .gte("date", range.startDate)
+        .lt("date", range.exclusiveEndDate)
+        .order("date", { ascending: true })
+        .order("teacher_name", { ascending: true })
+        .order("start_slot", { ascending: true });
+
+      if (error) {
+        console.error("Error cargando justificaciones:", error);
+        this.justificationsMessage = "No se pudieron cargar las ausencias. Inténtalo más tarde.";
+        this.justifications = [];
+        this.loadingJustifications = false;
+        return;
+      }
+
+      this.justifications = (data || []).map((row) => ({
+        ...row,
+        statusMessage: "",
+        statusMessageType: ""
+      }));
+      this.loadingJustifications = false;
+    },
     formatSlotLabel(start, end) {
       if (start === end) {
         return `Tramo ${start}`;
       }
       return `Tramos ${start}–${end}`;
+    },
+    formatDateForDisplay(dateString) {
+      if (!dateString) return "";
+      const parsed = new Date(dateString);
+      if (Number.isNaN(parsed.getTime())) {
+        return dateString;
+      }
+      return parsed.toLocaleDateString("es-ES", {
+        weekday: "short",
+        day: "2-digit",
+        month: "2-digit"
+      });
     },
     toggleAbsenceEdit(absence) {
       absence.editing = !absence.editing;
@@ -326,6 +418,32 @@ createApp({
 }
   await wait(1000);
       absence.editing = false;
+    },
+    async updateJustificationStatus(absence, newStatus) {
+      const previousStatus = absence.status;
+      absence.status = newStatus;
+      absence.statusMessage = "Guardando…";
+      absence.statusMessageType = "info";
+
+      const { error } = await client
+        .from("absences")
+        .update({ status: newStatus })
+        .eq("id", absence.id);
+
+      if (error) {
+        console.error("Error actualizando estado:", error);
+        absence.status = previousStatus;
+        absence.statusMessage = `Error: ${error.message}`;
+        absence.statusMessageType = "error";
+        return;
+      }
+
+      absence.statusMessage = "Estado actualizado";
+      absence.statusMessageType = "ok";
+      setTimeout(() => {
+        absence.statusMessage = "";
+        absence.statusMessageType = "";
+      }, 2500);
     },
     async deleteAbsence(absenceId) {
       if (!confirm("¿Eliminar esta ausencia?")) return;
