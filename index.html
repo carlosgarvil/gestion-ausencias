@@ -174,8 +174,8 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(row, index) in panelRows" :key="`${row.teacher}-${index}-${row.slotValue}`">
-                <td>{{ row.slotLabel }}</td>
+              <tr v-for="(row, index) in panelRows" :key="row.key || `${row.teacher}-${index}-${row.slotValue}`">
+                <td v-if="row.showSlotLabel" :rowspan="row.slotRowSpan">{{ row.slotLabel }}</td>
                 <td>{{ row.group }}</td>
                 <td>{{ row.subject }}</td>
                 <td>{{ row.classroom }}</td>

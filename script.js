@@ -456,14 +456,74 @@ createApp({
         });
       });
 
-      return rows.sort((a, b) => {
+      const normalizedRows = rows.sort((a, b) => {
         if (a.slotValue === null) return 1;
         if (b.slotValue === null) return -1;
         if (a.slotValue === b.slotValue) {
-          return a.group.localeCompare(b.group);
+          return a.teacher.localeCompare(b.teacher);
         }
         return a.slotValue - b.slotValue;
       });
+
+      const slotGroups = new Map();
+      normalizedRows.forEach((row) => {
+        const slotKey = Number.isFinite(row.slotValue)
+          ? row.slotValue
+          : `null-${row.slotLabel}`;
+        if (!slotGroups.has(slotKey)) {
+          slotGroups.set(slotKey, {
+            slotValue: row.slotValue,
+            slotLabel: row.slotLabel,
+            teachers: new Map()
+          });
+        }
+
+        const slotEntry = slotGroups.get(slotKey);
+        const teacherKey = row.teacher || "—";
+        if (!slotEntry.teachers.has(teacherKey)) {
+          slotEntry.teachers.set(teacherKey, {
+            teacher: teacherKey,
+            groups: new Set(),
+            subjects: new Set(),
+            classrooms: new Set()
+          });
+        }
+
+        const teacherEntry = slotEntry.teachers.get(teacherKey);
+        teacherEntry.groups.add(row.group);
+        teacherEntry.subjects.add(row.subject);
+        teacherEntry.classrooms.add(row.classroom);
+      });
+
+      const groupedRows = [];
+      const sortedSlotEntries = Array.from(slotGroups.values()).sort((a, b) => {
+        if (a.slotValue === null) return 1;
+        if (b.slotValue === null) return -1;
+        if (a.slotValue === b.slotValue) return 0;
+        return a.slotValue - b.slotValue;
+      });
+
+      sortedSlotEntries.forEach((slotEntry) => {
+        const teacherRows = Array.from(slotEntry.teachers.values()).sort((a, b) =>
+          a.teacher.localeCompare(b.teacher)
+        );
+
+        teacherRows.forEach((teacherRow, index) => {
+          groupedRows.push({
+            key: `${slotEntry.slotValue ?? slotEntry.slotLabel}-${teacherRow.teacher}-${index}`,
+            slotValue: slotEntry.slotValue,
+            slotLabel: slotEntry.slotLabel,
+            showSlotLabel: index === 0,
+            slotRowSpan: teacherRows.length,
+            group: Array.from(teacherRow.groups).join(", "),
+            subject: Array.from(teacherRow.subjects).join(", "),
+            classroom: Array.from(teacherRow.classrooms).join(", "),
+            teacher: teacherRow.teacher
+          });
+        });
+      });
+
+      return groupedRows;
     },
     formatDateForDisplay(dateString) {
       if (!dateString) return "";
