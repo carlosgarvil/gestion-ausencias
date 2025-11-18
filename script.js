@@ -23,6 +23,7 @@ const SLOT_OPTIONS = [
 
 const MENU_ITEMS = [
   { value: "ausencias", label: "Ausencias" },
+  { value: "panel", label: "Panel" },
   { value: "justificaciones", label: "Justificantes" },
   { value: "sustituciones", label: "Sustituciones" },
   { value: "ayuda", label: "Ayuda" }
@@ -81,6 +82,10 @@ createApp({
       loadingAbsences: false,
       absenceMessage: "",
       absenceMessageType: "",
+      panelDate: "",
+      panelRows: [],
+      loadingPanel: false,
+      panelMessage: "",
       justificationsMonth: getCurrentMonthValue(),
       justifications: [],
       loadingJustifications: false,
@@ -96,17 +101,22 @@ createApp({
   created() {
     this.initializeApp();
   },
-  watch: {
-    listDate(newValue, oldValue) {
-      if (newValue && newValue !== oldValue && this.isLoggedIn) {
-        this.loadAbsencesForDate();
+    watch: {
+      listDate(newValue, oldValue) {
+        if (newValue && newValue !== oldValue && this.isLoggedIn) {
+          this.loadAbsencesForDate();
+        }
+      },
+      panelDate(newValue, oldValue) {
+        if (newValue && newValue !== oldValue && this.isLoggedIn) {
+          this.loadPanelData();
+        }
+      },
+      justificationsMonth(newValue, oldValue) {
+        if (newValue && newValue !== oldValue && this.isLoggedIn) {
+          this.loadJustifications();
+        }
       }
-    },
-    justificationsMonth(newValue, oldValue) {
-      if (newValue && newValue !== oldValue && this.isLoggedIn) {
-        this.loadJustifications();
-      }
-    }
   },
   methods: {
     initializeApp() {
@@ -124,6 +134,7 @@ createApp({
       const today = getTodayISO();
       this.absenceForm.dateFrom = today;
       this.listDate = today;
+      this.panelDate = today;
     },
     async checkSession() {
       const { data } = await client.auth.getSession();
@@ -157,6 +168,9 @@ createApp({
       this.isLoggedIn = false;
       this.userEmail = "";
       this.absences = [];
+      this.panelRows = [];
+      this.panelMessage = "";
+      this.loadingPanel = false;
       this.justifications = [];
       this.substitutions = [];
       this.loadingJustifications = false;
@@ -175,6 +189,7 @@ createApp({
       await Promise.all([this.populateTeachers(), this.populateSubstitutionTeachers()]);
       this.setTodayDefaults();
       await this.loadAbsencesForDate();
+      await this.loadPanelData();
       await this.loadJustifications();
       await this.loadActiveSubstitutions();
     },
@@ -306,6 +321,33 @@ createApp({
       }));
       this.loadingAbsences = false;
     },
+    async loadPanelData() {
+      if (!this.panelDate) {
+        this.panelDate = getTodayISO();
+      }
+      this.loadingPanel = true;
+      this.panelMessage = "";
+      const { data, error } = await client
+        .from("classes_to_cover")
+        .select("*")
+        .eq("date", this.panelDate)
+        .order("slot", { ascending: true })
+        .order("group_name", { ascending: true });
+
+      if (error) {
+        console.error("Error cargando datos del panel:", error);
+        this.panelRows = [];
+        this.panelMessage = "No se pudieron cargar las clases pendientes de cubrir.";
+        this.loadingPanel = false;
+        return;
+      }
+
+      this.panelRows = this.mapClassesToPanelRows(data || []);
+      if (!this.panelRows.length) {
+        this.panelMessage = "No hay clases pendientes de cubrir para este día.";
+      }
+      this.loadingPanel = false;
+    },
     getMonthDateRange(monthValue) {
       if (!monthValue) return null;
       const [year, month] = monthValue.split("-");
@@ -362,6 +404,66 @@ createApp({
         return `Tramo ${start}`;
       }
       return `Tramos ${start}–${end}`;
+    },
+    getSlotLabel(slotValue) {
+      const slotNumber = Number(slotValue);
+      const slot = this.slotOptions.find((option) => option.value === slotNumber);
+      return slot ? slot.label : `Tramo ${slotValue}`;
+    },
+    mapClassesToPanelRows(entries = []) {
+      const rows = [];
+      entries.forEach((entry) => {
+        const group =
+          entry.group_name || entry.group || entry.class_group || entry.grupo || "—";
+        const subject =
+          entry.subject || entry.subject_name || entry.materia || entry.asignatura || "—";
+        const classroom =
+          entry.classroom || entry.room || entry.aula || entry.classroom_name || "—";
+        const teacher =
+          entry.teacher_display_name || entry.teacher_name || entry.teacher || "—";
+
+        const start = Number(entry.start_slot);
+        const end = Number(entry.end_slot);
+        if (Number.isFinite(start) && Number.isFinite(end) && end >= start) {
+          for (let slot = start; slot <= end; slot += 1) {
+            rows.push({
+              slotValue: slot,
+              slotLabel: this.getSlotLabel(slot),
+              group,
+              subject,
+              classroom,
+              teacher
+            });
+          }
+          return;
+        }
+
+        const slotValueRaw =
+          entry.slot ?? entry.slot_value ?? entry.slot_number ?? entry.tramo ?? null;
+        const slotValue = Number(slotValueRaw);
+        const slotLabel =
+          entry.slot_label ||
+          entry.slotLabel ||
+          (Number.isFinite(slotValue) ? this.getSlotLabel(slotValue) : "—");
+
+        rows.push({
+          slotValue: Number.isFinite(slotValue) ? slotValue : null,
+          slotLabel,
+          group,
+          subject,
+          classroom,
+          teacher
+        });
+      });
+
+      return rows.sort((a, b) => {
+        if (a.slotValue === null) return 1;
+        if (b.slotValue === null) return -1;
+        if (a.slotValue === b.slotValue) {
+          return a.group.localeCompare(b.group);
+        }
+        return a.slotValue - b.slotValue;
+      });
     },
     formatDateForDisplay(dateString) {
       if (!dateString) return "";

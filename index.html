@@ -148,6 +148,44 @@
         </div>
       </div>
 
+      <section id="panel-section" v-show="activeMenu === 'panel'">
+        <div class="panel-header">
+          <h2>Panel del centro</h2>
+          <div class="panel-controls">
+            <label>
+              Fecha
+              <input type="date" v-model="panelDate" />
+            </label>
+            <button type="button" class="btn-refresh" @click="loadPanelData">Actualizar</button>
+          </div>
+        </div>
+
+        <div class="panel-table-wrapper">
+          <p v-if="loadingPanel">Cargando clases…</p>
+          <p v-else-if="panelMessage">{{ panelMessage }}</p>
+          <table v-else class="panel-table">
+            <thead>
+              <tr>
+                <th>Franja horaria</th>
+                <th>Grupo</th>
+                <th>Materia</th>
+                <th>Aula</th>
+                <th>Profesor/a ausente</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, index) in panelRows" :key="`${row.teacher}-${index}-${row.slotValue}`">
+                <td>{{ row.slotLabel }}</td>
+                <td>{{ row.group }}</td>
+                <td>{{ row.subject }}</td>
+                <td>{{ row.classroom }}</td>
+                <td>{{ row.teacher }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
       <section id="justifications-section" v-show="activeMenu === 'justificaciones'">
         <div class="justifications-header">
           <h2>📋 Justificantes</h2>
