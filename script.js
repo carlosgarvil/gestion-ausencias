@@ -328,23 +328,23 @@ createApp({
       this.loadingPanel = true;
       this.panelMessage = "";
       const { data, error } = await client
-        .from("absences")
+        .from("classes_to_cover")
         .select("*")
         .eq("date", this.panelDate)
-        .order("start_slot", { ascending: true })
-        .order("teacher_name", { ascending: true });
+        .order("slot", { ascending: true })
+        .order("group_name", { ascending: true });
 
       if (error) {
         console.error("Error cargando datos del panel:", error);
         this.panelRows = [];
-        this.panelMessage = "No se pudieron cargar las ausencias para esta fecha.";
+        this.panelMessage = "No se pudieron cargar las clases pendientes de cubrir.";
         this.loadingPanel = false;
         return;
       }
 
-      this.panelRows = this.expandAbsencesForPanel(data || []);
+      this.panelRows = this.mapClassesToPanelRows(data || []);
       if (!this.panelRows.length) {
-        this.panelMessage = "No hay ausencias registradas para este día.";
+        this.panelMessage = "No hay clases pendientes de cubrir para este día.";
       }
       this.loadingPanel = false;
     },
@@ -410,39 +410,58 @@ createApp({
       const slot = this.slotOptions.find((option) => option.value === slotNumber);
       return slot ? slot.label : `Tramo ${slotValue}`;
     },
-    expandAbsencesForPanel(absences = []) {
+    mapClassesToPanelRows(entries = []) {
       const rows = [];
-      absences.forEach((absence) => {
-        const start = Number(absence.start_slot);
-        const end = Number(absence.end_slot);
-        const group = absence.group || absence.group_name || absence.class_group || "—";
-        const subject = absence.subject || absence.subject_name || absence.materia || "—";
-        const classroom = absence.classroom || absence.room || absence.aula || "—";
-        if (!Number.isFinite(start) || !Number.isFinite(end)) {
-          rows.push({
-            slotValue: null,
-            slotLabel: "—",
-            group,
-            subject,
-            classroom,
-            teacher: absence.teacher_name
-          });
+      entries.forEach((entry) => {
+        const group =
+          entry.group_name || entry.group || entry.class_group || entry.grupo || "—";
+        const subject =
+          entry.subject || entry.subject_name || entry.materia || entry.asignatura || "—";
+        const classroom =
+          entry.classroom || entry.room || entry.aula || entry.classroom_name || "—";
+        const teacher =
+          entry.teacher_display_name || entry.teacher_name || entry.teacher || "—";
+
+        const start = Number(entry.start_slot);
+        const end = Number(entry.end_slot);
+        if (Number.isFinite(start) && Number.isFinite(end) && end >= start) {
+          for (let slot = start; slot <= end; slot += 1) {
+            rows.push({
+              slotValue: slot,
+              slotLabel: this.getSlotLabel(slot),
+              group,
+              subject,
+              classroom,
+              teacher
+            });
+          }
           return;
         }
-        for (let slot = start; slot <= end; slot += 1) {
-          rows.push({
-            slotValue: slot,
-            slotLabel: this.getSlotLabel(slot),
-            group,
-            subject,
-            classroom,
-            teacher: absence.teacher_name
-          });
-        }
+
+        const slotValueRaw =
+          entry.slot ?? entry.slot_value ?? entry.slot_number ?? entry.tramo ?? null;
+        const slotValue = Number(slotValueRaw);
+        const slotLabel =
+          entry.slot_label ||
+          entry.slotLabel ||
+          (Number.isFinite(slotValue) ? this.getSlotLabel(slotValue) : "—");
+
+        rows.push({
+          slotValue: Number.isFinite(slotValue) ? slotValue : null,
+          slotLabel,
+          group,
+          subject,
+          classroom,
+          teacher
+        });
       });
+
       return rows.sort((a, b) => {
         if (a.slotValue === null) return 1;
         if (b.slotValue === null) return -1;
+        if (a.slotValue === b.slotValue) {
+          return a.group.localeCompare(b.group);
+        }
         return a.slotValue - b.slotValue;
       });
     },
