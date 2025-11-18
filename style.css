@@ -67,11 +67,69 @@ button {
   margin-top: 1rem;
 }
 
-#form-section, #list-section {
+#form-section, #list-section, #panel-section {
   background: #ffffff;
   padding: 0.8rem;
   border-radius: 8px;
   box-shadow: 0 0 6px rgba(0,0,0,0.06);
+}
+
+.panel-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .panel-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+}
+
+.panel-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .panel-controls {
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 1rem;
+  }
+  .panel-controls label {
+    min-width: 220px;
+  }
+}
+
+.panel-table-wrapper {
+  margin-top: 1rem;
+  overflow-x: auto;
+}
+
+.panel-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.panel-table th,
+.panel-table td {
+  border: 1px solid #e0e0e0;
+  padding: 0.4rem 0.6rem;
+  text-align: left;
+}
+
+.panel-table th {
+  background: #f3f6fa;
+  font-weight: 600;
+}
+
+.panel-table tbody tr:nth-child(even) {
+  background: #fafbfc;
 }
 
 .absence-list {
