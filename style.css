@@ -611,3 +611,74 @@ table tbody tr:hover td {
     width: 100%;
   }
 }
+
+@media print {
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  #app > h1,
+  .app-header,
+  .top-nav,
+  .panel-controls,
+  .btn-refresh,
+  .btn-save,
+  .btn-delete,
+  .btn-logout,
+  #form-section,
+  #list-section,
+  .justifications-header input,
+  .absence-actions,
+  .absence-edit,
+  .substitutions-layout,
+  #help-section {
+    display: none;
+  }
+
+  .panel-table-wrapper {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  .panel-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .panel-table th,
+  .panel-table td {
+    border: 1px solid #000;
+    padding: 8px;
+    text-align: left;
+  }
+
+  .panel-table th {
+    background-color: #f0f0f0;
+    font-weight: bold;
+  }
+
+  .panel-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+  }
+
+  .justifications-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .justifications-table th,
+  .justifications-table td {
+    border: 1px solid #000;
+    padding: 8px;
+    text-align: left;
+  }
+
+  .justifications-table th {
+    background-color: #f0f0f0;
+    font-weight: bold;
+  }
+}
