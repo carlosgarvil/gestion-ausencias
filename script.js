@@ -592,6 +592,12 @@ createApp({
       }
 
       if (typeof value === "number" && Number.isFinite(value)) {
+        if (value >= 1 && value <= 7) {
+          return value;
+        }
+        if (value >= 0 && value <= 6) {
+          return value + 1;
+        }
         return value;
       }
 
@@ -603,7 +609,7 @@ createApp({
 
         const numeric = Number(trimmed);
         if (!Number.isNaN(numeric)) {
-          return numeric;
+          return this.parseWeekday(numeric);
         }
 
         const lower = trimmed.toLowerCase();
@@ -721,6 +727,32 @@ createApp({
 
       return grid;
     },
+    matchesTeacherScheduleEntry(entry, teacherName) {
+      if (!teacherName) {
+        return false;
+      }
+
+      const normalizedTeacher = teacherName.trim().toLowerCase();
+      if (!normalizedTeacher) {
+        return false;
+      }
+
+      const candidates = [
+        entry.teacher_name,
+        entry.teacher,
+        entry.teacher_display_name,
+        entry.teacher_full_name,
+        entry.docente,
+        entry.profesor
+      ];
+
+      return candidates.some((candidate) => {
+        if (typeof candidate !== "string") {
+          return false;
+        }
+        return candidate.trim().toLowerCase() === normalizedTeacher;
+      });
+    },
     async loadTeacherSchedule() {
       if (!this.teacherScheduleTeacher) {
         this.teacherScheduleGrid = this.buildEmptyTeacherScheduleGrid();
@@ -731,21 +763,23 @@ createApp({
       this.loadingTeacherSchedule = true;
       this.teacherScheduleMessage = "";
 
-      const { data, error } = await client
-        .from("timetable")
-        .select("*")
-        .eq("teacher_name", this.teacherScheduleTeacher);
+      const { data, error } = await client.from("timetable").select("*");
 
       if (error) {
         console.error("Error cargando horario del profesorado:", error);
-        this.teacherScheduleMessage = "No se pudo cargar el horario. Inténtalo de nuevo más tarde.";
+        this.teacherScheduleMessage =
+          "No se pudo cargar el horario. Inténtalo de nuevo más tarde.";
         this.teacherScheduleGrid = this.buildEmptyTeacherScheduleGrid();
         this.loadingTeacherSchedule = false;
         return;
       }
 
-      this.teacherScheduleGrid = this.mapEntriesToTeacherSchedule(data || []);
-      if (!data?.length) {
+      const entries = (data || []).filter((entry) =>
+        this.matchesTeacherScheduleEntry(entry, this.teacherScheduleTeacher)
+      );
+
+      this.teacherScheduleGrid = this.mapEntriesToTeacherSchedule(entries);
+      if (!entries.length) {
         this.teacherScheduleMessage = "No hay clases registradas para este docente.";
       }
 
