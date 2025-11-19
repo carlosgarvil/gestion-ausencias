@@ -21,10 +21,19 @@ const SLOT_OPTIONS = [
   { value: 14, label: "20:15–21:15" }
 ];
 
+const WEEK_DAYS = [
+  { value: 1, label: "Lunes" },
+  { value: 2, label: "Martes" },
+  { value: 3, label: "Miércoles" },
+  { value: 4, label: "Jueves" },
+  { value: 5, label: "Viernes" }
+];
+
 const MENU_ITEMS = [
   { value: "ausencias", label: "Ausencias" },
   { value: "panel", label: "Panel" },
   { value: "justificaciones", label: "Justificantes" },
+  { value: "profesorado", label: "Profesorado" },
   { value: "sustituciones", label: "Sustituciones" },
   { value: "ayuda", label: "Ayuda" }
 ];
@@ -57,6 +66,7 @@ createApp({
     return {
       menuItems: MENU_ITEMS,
       slotOptions: SLOT_OPTIONS,
+      teacherScheduleDays: WEEK_DAYS,
       justificationStatusOptions: JUSTIFICATION_STATUS_OPTIONS,
       activeMenu: "ausencias",
       isLoggedIn: false,
@@ -95,28 +105,47 @@ createApp({
         teacher: "",
         displayName: "",
         emailForm: "@iespoligonosur.org"
-      }
+      },
+      teacherScheduleTeacher: "",
+      teacherScheduleGrid: SLOT_OPTIONS.map((slot) => ({
+        slotValue: slot.value,
+        slotLabel: slot.label,
+        days: WEEK_DAYS.map(() => [])
+      })),
+      loadingTeacherSchedule: false,
+      teacherScheduleMessage: ""
     };
   },
   created() {
     this.initializeApp();
   },
-    watch: {
-      listDate(newValue, oldValue) {
-        if (newValue && newValue !== oldValue && this.isLoggedIn) {
-          this.loadAbsencesForDate();
-        }
-      },
-      panelDate(newValue, oldValue) {
-        if (newValue && newValue !== oldValue && this.isLoggedIn) {
-          this.loadPanelData();
-        }
-      },
-      justificationsMonth(newValue, oldValue) {
-        if (newValue && newValue !== oldValue && this.isLoggedIn) {
-          this.loadJustifications();
-        }
+  watch: {
+    listDate(newValue, oldValue) {
+      if (newValue && newValue !== oldValue && this.isLoggedIn) {
+        this.loadAbsencesForDate();
       }
+    },
+    panelDate(newValue, oldValue) {
+      if (newValue && newValue !== oldValue && this.isLoggedIn) {
+        this.loadPanelData();
+      }
+    },
+    justificationsMonth(newValue, oldValue) {
+      if (newValue && newValue !== oldValue && this.isLoggedIn) {
+        this.loadJustifications();
+      }
+    },
+    teacherScheduleTeacher(newValue, oldValue) {
+      if (!newValue) {
+        this.teacherScheduleGrid = this.buildEmptyTeacherScheduleGrid();
+        this.teacherScheduleMessage = "";
+        return;
+      }
+
+      if (newValue !== oldValue && this.isLoggedIn) {
+        this.loadTeacherSchedule();
+      }
+    }
   },
   methods: {
     initializeApp() {
@@ -178,6 +207,10 @@ createApp({
       this.justificationsMonth = getCurrentMonthValue();
       this.loginForm.password = "";
       this.activeMenu = "ausencias";
+      this.teacherScheduleTeacher = "";
+      this.teacherScheduleGrid = this.buildEmptyTeacherScheduleGrid();
+      this.loadingTeacherSchedule = false;
+      this.teacherScheduleMessage = "";
     },
     handleAuthenticated(user) {
       this.isLoggedIn = true;
@@ -192,6 +225,9 @@ createApp({
       await this.loadPanelData();
       await this.loadJustifications();
       await this.loadActiveSubstitutions();
+      if (this.teacherScheduleTeacher) {
+        await this.loadTeacherSchedule();
+      }
     },
     async populateTeachers() {
       const { data, error } = await client
@@ -524,6 +560,281 @@ createApp({
       });
 
       return groupedRows;
+    },
+    buildEmptyTeacherScheduleGrid() {
+      return this.slotOptions.map((slot) => ({
+        slotValue: slot.value,
+        slotLabel: slot.label,
+        days: this.teacherScheduleDays.map(() => [])
+      }));
+    },
+    normalizeWeekdayValue(entry) {
+      const candidates = [
+        entry.weekday_letter,
+        entry.weekday,
+        entry.week_day,
+        entry.day_of_week,
+        entry.day,
+        entry.weekday_number,
+        entry.weekday_index
+      ];
+
+      for (const candidate of candidates) {
+        const normalized = this.parseWeekday(candidate);
+        if (normalized) {
+          return normalized;
+        }
+      }
+      return null;
+    },
+    parseWeekday(value) {
+      if (value === null || value === undefined) {
+        return null;
+      }
+
+      if (typeof value === "number" && Number.isFinite(value)) {
+        if (value >= 1 && value <= 7) {
+          return value;
+        }
+        if (value >= 0 && value <= 6) {
+          return value + 1;
+        }
+        return value;
+      }
+
+      if (typeof value === "string") {
+        const trimmed = value.trim().toLowerCase();
+        if (!trimmed) {
+          return null;
+        }
+
+        // Mapeo de letras a números
+        const letterMapping = {
+          l: 1,  // Lunes
+          m: 2,  // Martes
+          x: 3,  // miércoles
+          j: 4,  // Jueves
+          v: 5   // Viernes
+        };
+
+        if (letterMapping[trimmed]) {
+          return letterMapping[trimmed];
+        }
+
+        const numeric = Number(trimmed);
+        if (!Number.isNaN(numeric)) {
+          return this.parseWeekday(numeric);
+        }
+
+        const mapping = {
+          lunes: 1,
+          monday: 1,
+          martes: 2,
+          tuesday: 2,
+          miércoles: 3,
+          miercoles: 3,
+          wednesday: 3,
+          jueves: 4,
+          thursday: 4,
+          viernes: 5,
+          friday: 5,
+          sábado: 6,
+          sabado: 6,
+          saturday: 6
+        };
+
+        return mapping[trimmed] ?? null;
+      }
+
+      return null;
+    },
+    normalizeSlotValue(entry) {
+      const candidates = [
+        entry.slot,
+        entry.slot_value,
+        entry.slot_number,
+        entry.tramo,
+        entry.hour_slot,
+        entry.start_slot
+      ];
+
+      for (const candidate of candidates) {
+        if (candidate === null || candidate === undefined) {
+          continue;
+        }
+
+        const parsed = Number(candidate);
+        if (!Number.isNaN(parsed)) {
+          return parsed;
+        }
+      }
+
+      return null;
+    },
+    isScheduleEntryVisible(entry) {
+      const candidates = [
+        entry.visible,
+        entry.is_visible,
+        entry.mostrar,
+        entry.show_in_panel,
+        entry.show
+      ];
+
+      const firstDefined = candidates.find((value) => value !== undefined && value !== null);
+      if (firstDefined === undefined) {
+        return true;
+      }
+
+      if (typeof firstDefined === "string") {
+        return firstDefined.toLowerCase() === "true" || firstDefined === "1";
+      }
+
+      return Boolean(firstDefined);
+    },
+    mapEntriesToTeacherSchedule(entries = []) {
+      const grid = this.buildEmptyTeacherScheduleGrid();
+      const dayIndexByValue = new Map(
+        this.teacherScheduleDays.map((day, index) => [day.value, index])
+      );
+      const slotIndexByValue = new Map(grid.map((row, index) => [row.slotValue, index]));
+
+      console.log("=== mapEntriesToTeacherSchedule ===");
+      console.log("Primer registro:", entries[0]);
+      console.log("Campos disponibles:", entries[0] ? Object.keys(entries[0]) : []);
+
+      const sortedEntries = [...entries].sort((a, b) => {
+        const dayA = this.normalizeWeekdayValue(a) ?? 99;
+        const dayB = this.normalizeWeekdayValue(b) ?? 99;
+        if (dayA === dayB) {
+          return (this.normalizeSlotValue(a) ?? 0) - (this.normalizeSlotValue(b) ?? 0);
+        }
+        return dayA - dayB;
+      });
+
+      sortedEntries.forEach((entry) => {
+        const slotValue = this.normalizeSlotValue(entry);
+        const weekdayValue = this.normalizeWeekdayValue(entry);
+
+        console.log(`Entry: slot=${slotValue}, day=${weekdayValue}`);
+
+        if (!Number.isFinite(slotValue) || !dayIndexByValue.has(weekdayValue)) {
+          console.log(`  → Ignorada (slot o day inválidos)`);
+          return;
+        }
+
+        const slotIndex = slotIndexByValue.get(slotValue);
+        if (slotIndex === undefined) {
+          console.log(`  → Ignorada (slot no en grid)`);
+          return;
+        }
+
+        const subject =
+          entry.subject || entry.subject_name || entry.materia || entry.asignatura || "—";
+        const group =
+          entry.group_name || entry.group || entry.class_group || entry.grupo || "";
+        const classroom =
+          entry.classroom || entry.classroom_name || entry.room || entry.aula || "";
+        const notes = entry.notes || entry.comments || entry.observaciones || "";
+
+        const dayIndex = dayIndexByValue.get(weekdayValue);
+        
+        // Buscar si ya existe una entrada para esta aula en este slot/día
+        const existingIndex = grid[slotIndex].days[dayIndex].findIndex(
+          (item) => item.classroom === classroom && item.subject === subject
+        );
+
+        if (existingIndex !== -1) {
+          // Unificar: añadir el grupo a la lista existente
+          const existingItem = grid[slotIndex].days[dayIndex][existingIndex];
+          const groupSet = new Set(existingItem.group.split(", ").filter(g => g));
+          groupSet.add(group);
+          existingItem.group = Array.from(groupSet).join(", ");
+        } else {
+          // Crear nueva entrada
+          grid[slotIndex].days[dayIndex].push({
+            subject,
+            group,
+            classroom,
+            notes,
+            visible: this.isScheduleEntryVisible(entry)
+          });
+        }
+
+        console.log(`  → Añadida a grid[${slotIndex}].days[${dayIndex}]`);
+      });
+
+      console.log("Grid final:", grid);
+      return grid;
+    },
+    matchesTeacherScheduleEntry(entry, teacherName) {
+      if (!teacherName) {
+        return false;
+      }
+
+      const normalizedTeacher = teacherName.trim().toLowerCase();
+      if (!normalizedTeacher) {
+        return false;
+      }
+
+      const candidates = [
+        entry.teacher_name,
+        entry.teacher,
+        entry.teacher_display_name,
+        entry.teacher_full_name,
+        entry.docente,
+        entry.profesor
+      ];
+
+      return candidates.some((candidate) => {
+        if (typeof candidate !== "string") {
+          return false;
+        }
+        return candidate.trim().toLowerCase() === normalizedTeacher;
+      });
+    },
+    async loadTeacherSchedule() {
+      if (!this.teacherScheduleTeacher) {
+        this.teacherScheduleGrid = this.buildEmptyTeacherScheduleGrid();
+        this.teacherScheduleMessage = "Selecciona un profesor para ver su horario.";
+        return;
+      }
+
+      this.loadingTeacherSchedule = true;
+      this.teacherScheduleMessage = "";
+
+      console.log("Buscando profesor:", this.teacherScheduleTeacher);
+
+      const { data, error } = await client
+        .from("timetable")
+        .select("*")
+        .eq("teacher_name", this.teacherScheduleTeacher);
+
+      console.log("Error:", error);
+      console.log("Data:", data);
+      console.log("Datos count:", data?.length);
+
+      if (error) {
+        console.error("Error cargando horario del profesorado:", error);
+        this.teacherScheduleMessage =
+          "No se pudo cargar el horario. Inténtalo de nuevo más tarde.";
+        this.teacherScheduleGrid = this.buildEmptyTeacherScheduleGrid();
+        this.loadingTeacherSchedule = false;
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        // Obtén todos los nombres para comparar
+        const { data: allData } = await client.from("timetable").select("teacher_name");
+        console.log("Nombres disponibles en BD:", allData?.map(d => d.teacher_name) || []);
+        
+        this.teacherScheduleMessage = "No hay clases registradas para este docente.";
+        this.teacherScheduleGrid = this.buildEmptyTeacherScheduleGrid();
+        this.loadingTeacherSchedule = false;
+        return;
+      }
+
+      this.teacherScheduleGrid = this.mapEntriesToTeacherSchedule(data);
+      this.loadingTeacherSchedule = false;
     },
     formatDateForDisplay(dateString) {
       if (!dateString) return "";
