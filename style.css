@@ -535,6 +535,121 @@ table tbody tr:hover td {
   transition: background-color 120ms ease;
 }
 
+/* =====================================
+   SECCIÓN PROFESORADO
+   ===================================== */
+#teachers-section {
+  margin-top: 1.5rem;
+  background: #ffffff;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 0 6px rgba(0,0,0,0.06);
+}
+
+.teacher-schedule-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .teacher-schedule-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+}
+
+.teacher-schedule-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@media (min-width: 540px) {
+  .teacher-schedule-controls {
+    flex-direction: row;
+    align-items: flex-end;
+  }
+  .teacher-schedule-controls label {
+    min-width: 220px;
+  }
+}
+
+.teacher-schedule-grid {
+  margin-top: 1rem;
+  overflow-x: auto;
+}
+
+.schedule-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.schedule-table th,
+.schedule-table td {
+  border: 1px solid #e0e6ef;
+  padding: 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.schedule-table thead th {
+  background: #f3f6fb;
+}
+
+.schedule-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.schedule-cell--empty {
+  color: #b0b8c5;
+  text-align: center;
+}
+
+.schedule-class {
+  border-radius: 6px;
+  padding: 0.35rem 0.45rem;
+  background: #e9f3ff;
+  border: 1px solid #c8e1ff;
+}
+
+.schedule-class--hidden {
+  background: #fce8e6;
+  border-color: #f4b4ac;
+}
+
+.schedule-class-main {
+  font-weight: 600;
+  margin: 0 0 0.1rem 0;
+}
+
+.schedule-class-meta {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #3d4a5c;
+}
+
+.schedule-class-notes {
+  margin: 0.2rem 0 0 0;
+  font-size: 0.8rem;
+  color: #555;
+}
+
+.schedule-badge {
+  display: inline-block;
+  margin-top: 0.2rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #8a1c14;
+  background: #ffe1dd;
+}
+
 /* Ajustes para selects y mensajes en la columna de estado */
 .status-select {
   padding: 0.25rem 0.4rem;
