@@ -64,7 +64,6 @@ Si tu esquema difiere, actualiza las funciones en `script.js`:
 
 ## Capturas (añadir en `assets/screenshots`)
 
-Coloca las imágenes en `assets/screenshots/` y referencia aquí con rutas relativas. Nombres sugeridos basados en tus descripciones:
 
 - assets/screenshots/captura1_ausencias.png  
   ![Ausencias](assets/screenshots/captura1_ausencias.png)  
@@ -83,12 +82,8 @@ Coloca las imágenes en `assets/screenshots/` y referencia aquí con rutas relat
   Figura — Horario semanal del profesorado (entradas unificadas por aula/materia).
 
 - assets/screenshots/captura5_sustituciones.png  
-  ![Sustituciones](assets/screenshots/captura5_sustituciones.png)  
+  ![Sustituciones](assets/screenshots/captura5.png)  
   Figura — Panel de sustituciones.
-
-Notas:
-- Usa nombres claros y optimiza tamaño antes de subir.
-- Si subes muchas imágenes grandes, considera Git LFS para no inflar el repo.
 
 ---
 
