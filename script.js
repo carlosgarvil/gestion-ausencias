@@ -570,6 +570,7 @@ createApp({
     },
     normalizeWeekdayValue(entry) {
       const candidates = [
+        entry.weekday_letter,
         entry.weekday,
         entry.week_day,
         entry.day_of_week,
@@ -602,9 +603,22 @@ createApp({
       }
 
       if (typeof value === "string") {
-        const trimmed = value.trim();
+        const trimmed = value.trim().toLowerCase();
         if (!trimmed) {
           return null;
+        }
+
+        // Mapeo de letras a números
+        const letterMapping = {
+          l: 1,  // Lunes
+          m: 2,  // Martes
+          x: 3,  // miércoles
+          j: 4,  // Jueves
+          v: 5   // Viernes
+        };
+
+        if (letterMapping[trimmed]) {
+          return letterMapping[trimmed];
         }
 
         const numeric = Number(trimmed);
@@ -612,7 +626,6 @@ createApp({
           return this.parseWeekday(numeric);
         }
 
-        const lower = trimmed.toLowerCase();
         const mapping = {
           lunes: 1,
           monday: 1,
@@ -630,7 +643,7 @@ createApp({
           saturday: 6
         };
 
-        return mapping[lower] ?? null;
+        return mapping[trimmed] ?? null;
       }
 
       return null;
@@ -685,6 +698,10 @@ createApp({
       );
       const slotIndexByValue = new Map(grid.map((row, index) => [row.slotValue, index]));
 
+      console.log("=== mapEntriesToTeacherSchedule ===");
+      console.log("Primer registro:", entries[0]);
+      console.log("Campos disponibles:", entries[0] ? Object.keys(entries[0]) : []);
+
       const sortedEntries = [...entries].sort((a, b) => {
         const dayA = this.normalizeWeekdayValue(a) ?? 99;
         const dayB = this.normalizeWeekdayValue(b) ?? 99;
@@ -698,12 +715,16 @@ createApp({
         const slotValue = this.normalizeSlotValue(entry);
         const weekdayValue = this.normalizeWeekdayValue(entry);
 
+        console.log(`Entry: slot=${slotValue}, day=${weekdayValue}`);
+
         if (!Number.isFinite(slotValue) || !dayIndexByValue.has(weekdayValue)) {
+          console.log(`  → Ignorada (slot o day inválidos)`);
           return;
         }
 
         const slotIndex = slotIndexByValue.get(slotValue);
         if (slotIndex === undefined) {
+          console.log(`  → Ignorada (slot no en grid)`);
           return;
         }
 
@@ -716,15 +737,33 @@ createApp({
         const notes = entry.notes || entry.comments || entry.observaciones || "";
 
         const dayIndex = dayIndexByValue.get(weekdayValue);
-        grid[slotIndex].days[dayIndex].push({
-          subject,
-          group,
-          classroom,
-          notes,
-          visible: this.isScheduleEntryVisible(entry)
-        });
+        
+        // Buscar si ya existe una entrada para esta aula en este slot/día
+        const existingIndex = grid[slotIndex].days[dayIndex].findIndex(
+          (item) => item.classroom === classroom && item.subject === subject
+        );
+
+        if (existingIndex !== -1) {
+          // Unificar: añadir el grupo a la lista existente
+          const existingItem = grid[slotIndex].days[dayIndex][existingIndex];
+          const groupSet = new Set(existingItem.group.split(", ").filter(g => g));
+          groupSet.add(group);
+          existingItem.group = Array.from(groupSet).join(", ");
+        } else {
+          // Crear nueva entrada
+          grid[slotIndex].days[dayIndex].push({
+            subject,
+            group,
+            classroom,
+            notes,
+            visible: this.isScheduleEntryVisible(entry)
+          });
+        }
+
+        console.log(`  → Añadida a grid[${slotIndex}].days[${dayIndex}]`);
       });
 
+      console.log("Grid final:", grid);
       return grid;
     },
     matchesTeacherScheduleEntry(entry, teacherName) {
@@ -763,7 +802,16 @@ createApp({
       this.loadingTeacherSchedule = true;
       this.teacherScheduleMessage = "";
 
-      const { data, error } = await client.from("timetable").select("*");
+      console.log("Buscando profesor:", this.teacherScheduleTeacher);
+
+      const { data, error } = await client
+        .from("timetable")
+        .select("*")
+        .eq("teacher_name", this.teacherScheduleTeacher);
+
+      console.log("Error:", error);
+      console.log("Data:", data);
+      console.log("Datos count:", data?.length);
 
       if (error) {
         console.error("Error cargando horario del profesorado:", error);
@@ -774,15 +822,18 @@ createApp({
         return;
       }
 
-      const entries = (data || []).filter((entry) =>
-        this.matchesTeacherScheduleEntry(entry, this.teacherScheduleTeacher)
-      );
-
-      this.teacherScheduleGrid = this.mapEntriesToTeacherSchedule(entries);
-      if (!entries.length) {
+      if (!data || data.length === 0) {
+        // Obtén todos los nombres para comparar
+        const { data: allData } = await client.from("timetable").select("teacher_name");
+        console.log("Nombres disponibles en BD:", allData?.map(d => d.teacher_name) || []);
+        
         this.teacherScheduleMessage = "No hay clases registradas para este docente.";
+        this.teacherScheduleGrid = this.buildEmptyTeacherScheduleGrid();
+        this.loadingTeacherSchedule = false;
+        return;
       }
 
+      this.teacherScheduleGrid = this.mapEntriesToTeacherSchedule(data);
       this.loadingTeacherSchedule = false;
     },
     formatDateForDisplay(dateString) {
