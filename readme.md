@@ -49,13 +49,16 @@ Integra Google Forms + Apps Script y Supabase. Los horarios del profesorado se i
 ## Capturas
 
 
+<div style="text-align:center;">
 <h2>Capturas de pantalla</h2>
 
-<img src="assets/screenshots/Captura1.png" width="500">
-<img src="assets/screenshots/Captura2.png" width="500">
-<img src="assets/screenshots/Captura3.png" width="500">
-<img src="assets/screenshots/Captura4.png" width="500">
-<img src="assets/screenshots/Captura5.png" width="500">
+<img src="assets/screenshots/Captura1.png" style="max-width:800px;width:70vw;margin:0.5rem 0;">
+<br>
+<img src="assets/screenshots/Captura2.png" style="width:500px;max-width:90%;margin:0.5rem;">
+<img src="assets/screenshots/Captura3.png" style="width:500px;max-width:90%;margin:0.5rem;">
+<img src="assets/screenshots/Captura4.png" style="width:500px;max-width:90%;margin:0.5rem;">
+<img src="assets/screenshots/Captura5.png" style="width:500px;max-width:90%;margin:0.5rem;">
+</div>
 
 
 ---
