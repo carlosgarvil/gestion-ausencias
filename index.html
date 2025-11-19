@@ -148,6 +148,74 @@
         </div>
       </div>
 
+      <section id="teachers-section" v-show="activeMenu === 'profesorado'">
+        <div class="teacher-schedule-header">
+          <div>
+            <h2>👩‍🏫 Profesorado</h2>
+            <p class="absence-meta">
+              Consulta el horario semanal completo del docente, incluyendo horas marcadas como “no visibles”.
+            </p>
+          </div>
+          <div class="teacher-schedule-controls">
+            <label>
+              Profesor/a
+              <select v-model="teacherScheduleTeacher">
+                <option value="">Selecciona…</option>
+                <option v-for="teacher in teachers" :key="`schedule-${teacher.name}`" :value="teacher.name">
+                  {{ teacher.name }}
+                </option>
+              </select>
+            </label>
+            <button
+              type="button"
+              class="btn-refresh"
+              @click="loadTeacherSchedule"
+              :disabled="!teacherScheduleTeacher || loadingTeacherSchedule"
+            >
+              Actualizar
+            </button>
+          </div>
+        </div>
+
+        <div class="teacher-schedule-content">
+          <p v-if="!teacherScheduleTeacher" class="absence-meta">Selecciona un docente para cargar su horario.</p>
+          <p v-else-if="loadingTeacherSchedule" class="absence-meta">Cargando horario…</p>
+          <p v-else-if="teacherScheduleMessage" class="absence-meta">{{ teacherScheduleMessage }}</p>
+          <div v-else class="teacher-schedule-grid">
+            <table class="schedule-table">
+              <thead>
+                <tr>
+                  <th>Franja</th>
+                  <th v-for="day in teacherScheduleDays" :key="`day-${day.value}`">{{ day.label }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in teacherScheduleGrid" :key="`slot-${row.slotValue}`">
+                  <th>{{ row.slotLabel }}</th>
+                  <td v-for="(cell, index) in row.days" :key="`cell-${row.slotValue}-${index}`">
+                    <div v-if="cell.length" class="schedule-cell">
+                      <article
+                        v-for="(classInfo, idx) in cell"
+                        :key="`class-${row.slotValue}-${index}-${idx}`"
+                        class="schedule-class"
+                        :class="{ 'schedule-class--hidden': !classInfo.visible }"
+                      >
+                        <p class="schedule-class-main">{{ classInfo.subject }}</p>
+                        <p v-if="classInfo.group" class="schedule-class-meta">{{ classInfo.group }}</p>
+                        <p v-if="classInfo.classroom" class="schedule-class-meta">Aula: {{ classInfo.classroom }}</p>
+                        <span v-if="!classInfo.visible" class="schedule-badge">No visible</span>
+                        <p v-if="classInfo.notes" class="schedule-class-notes">{{ classInfo.notes }}</p>
+                      </article>
+                    </div>
+                    <div v-else class="schedule-cell schedule-cell--empty">—</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
       <section id="panel-section" v-show="activeMenu === 'panel'">
         <div class="panel-header">
           <h2>Panel del centro</h2>
@@ -314,6 +382,9 @@
             <li>Usa el formulario de “Registro de ausencias” para comunicar ausencias planificadas o sobrevenidas.</li>
             <li>Para ausencias de varios días, utiliza los campos <strong>Fecha desde</strong> y <strong>Fecha hasta</strong>. El sistema genera un registro diario.</li>
             <li>Completa los tramos horarios afectados. Puedes modificarlos posteriormente desde la lista de ausencias.</li>
+            <li>Las ausencias se guardan automáticamente cuando el profesorado rellena el formulario de Google Classroom; por tanto pueden aparecer registradas sin intervención manual en esta aplicación.</li>
+            <li>Por defecto, las ausencias creadas se marcan como ausencia de día completo (tramos <strong>1–14</strong>). Si el profesor se reincorpora durante la jornada, edita los tramos de esa ausencia para eliminar los tramos ya cubiertos y evitar que siga apareciendo en el panel.</li>
+            <li>El panel muestra exactamente la información que se visualiza en la TV de la Sala del Profesorado: cualquier cambio en los tramos en este sistema se reflejará en dicha TV tras actualizar el panel.</li>
           </ul>
         </article>
 
