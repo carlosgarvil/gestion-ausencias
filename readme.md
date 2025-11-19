@@ -1,6 +1,8 @@
 # Gestión de Ausencias del Profesorado — IES Polígono Sur
 
-Proyecto web para la gestión de ausencias del profesorado, generación automática de clases a cubrir y administración de sustituciones. Integra Google Forms + Apps Script y Supabase.
+Proyecto web para la gestión de ausencias del profesorado, generación automática de clases a cubrir y administración de sustituciones. 
+Integra Google Forms + Apps Script y Supabase. Los horarios del profesorado se importan desde **HORW** (software de gestión de horarios) directamente en Supabase. 
+
 
 ---
 
@@ -13,6 +15,7 @@ Proyecto web para la gestión de ausencias del profesorado, generación automát
 - El panel de clases a cubrir agrupa por tramo y usa rowspan para no repetir la columna del tramo.
 - Impresión optimizada: media query `@media print` para imprimir la tabla en horizontal.
 - Ayuda actualizada in-app (`#help-section`) con instrucciones sobre Google Classroom, tramos por defecto y vínculo con la TV de Sala del Profesorado.
+- La versión actual no contempla la carga de nuevos archivos CSV directamente desde la web, pero está en la hoja de ruta.
 
 ---
 
@@ -31,7 +34,6 @@ Proyecto web para la gestión de ausencias del profesorado, generación automát
 
 ### Horario del profesorado
 - Selecciona un docente para cargar su horario semanal.
-- Consulta a Supabase filtrada por `teacher_name` (mejor rendimiento).
 - Las entradas del mismo día/tramo que comparten aula y materia se unifican concatenando grupos.
 
 ### Gestión de sustituciones
@@ -44,57 +46,17 @@ Proyecto web para la gestión de ausencias del profesorado, generación automát
 
 ---
 
-## Esquema esperado (campos relevantes)
-
-Las funciones y el mapeo esperan, como mínimo, los siguientes campos en `timetable`:
-- id
-- subject
-- group_name
-- classroom
-- teacher_name
-- weekday_letter (L/M/X/J/V) o equivalente (se normaliza)
-- slot (número del tramo)
-- visible (boolean)
-
-Si tu esquema difiere, actualiza las funciones en `script.js`:
-- `normalizeWeekdayValue` / `parseWeekday` — convierte letras/nombres a números de día.
-- `normalizeSlotValue` — extrae el número de tramo de diversos nombres de campo.
-
----
-
-## Capturas (añadir en `assets/screenshots`)
+## Capturas
 
 
-- assets/screenshots/captura1_ausencias.png  
-  ![Ausencias](assets/screenshots/captura1_ausencias.png)  
-  Figura — Formulario de registro de ausencias.
+<h2>Capturas de pantalla</h2>
 
-- assets/screenshots/captura2_panel.png  
-  ![Panel de clases a cubrir](assets/screenshots/captura2_panel.png)  
-  Figura — Panel de clases pendientes (agrupado por tramo, vista para la TV).
+<img src="assets/screenshots/Captura1.png" width="500">
+<img src="assets/screenshots/Captura2.png" width="500">
+<img src="assets/screenshots/Captura3.png" width="500">
+<img src="assets/screenshots/Captura4.png" width="500">
+<img src="assets/screenshots/Captura5.png" width="500">
 
-- assets/screenshots/captura3_justificantes.png  
-  ![Justificantes](assets/screenshots/captura3_justificantes.png)  
-  Figura — Gestión de justificantes y estados.
-
-- assets/screenshots/captura4_profesorado.png  
-  ![Profesorado — horario](assets/screenshots/captura4_profesorado.png)  
-  Figura — Horario semanal del profesorado (entradas unificadas por aula/materia).
-
-- assets/screenshots/captura5_sustituciones.png  
-  ![Sustituciones](assets/screenshots/captura5.png)  
-  Figura — Panel de sustituciones.
-
----
-
-## Depuración rápida
-
-- Abrir consola del navegador (F12) y revisar logs generados por `script.js`:
-  - `loadTeacherSchedule()` imprime la respuesta de Supabase.
-  - `mapEntriesToTeacherSchedule()` muestra campos disponibles y por qué entradas se ignoran.
-- Si `.eq('teacher_name', ...)` devuelve vacío, listar los `teacher_name` de la tabla con:
-  - Añade temporalmente en `script.js`: `await client.from('timetable').select('teacher_name')` y comprueba valores.
-- Verifica tildes, espacios y formato del nombre al filtrar.
 
 ---
 
@@ -115,6 +77,4 @@ Si tu esquema difiere, actualiza las funciones en `script.js`:
 3. Archivo con credenciales Supabase: revisar `script.js` (URL y clave anónima). Para producción usa variables de entorno y RLS.
 
 ---
-
-Si quieres que inserte las imágenes con nombres y pies de foto exactos en el README (o que genere ejemplos de captura y texto alternativo), indícame los nombres de fichero exactos y los pies de foto que prefieres.
 
