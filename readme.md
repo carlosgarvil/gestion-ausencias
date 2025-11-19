@@ -52,12 +52,12 @@ Integra Google Forms + Apps Script y Supabase. Los horarios del profesorado se i
 <div style="text-align:center;">
 <h2>Capturas de pantalla</h2>
 
-<img src="assets/screenshots/Captura1.png" style="max-width:800px;width:70vw;margin:0.5rem 0;">
+<img src="assets/screenshots/Captura1.png" alt="Captura 1 — panel principal de gestión de ausencias" style="max-width:800px;width:70vw;margin:0.5rem 0;border:1px solid #111;">
 <br>
-<img src="assets/screenshots/Captura2.png" style="width:500px;max-width:90%;margin:0.5rem;">
-<img src="assets/screenshots/Captura3.png" style="width:500px;max-width:90%;margin:0.5rem;">
-<img src="assets/screenshots/Captura4.png" style="width:500px;max-width:90%;margin:0.5rem;">
-<img src="assets/screenshots/Captura5.png" style="width:500px;max-width:90%;margin:0.5rem;">
+<img src="assets/screenshots/Captura2.png" alt="Captura 2 — lista de clases a cubrir" style="max-width:800px;width:70vw;margin:0.5rem 0;border:1px solid #111;">
+<img src="assets/screenshots/Captura3.png" alt="Captura 3 — vista de horario del profesorado" style="max-width:800px;width:70vw;margin:0.5rem 0;border:1px solid #111;">
+<img src="assets/screenshots/Captura4.png" alt="Captura 4 — formulario de registro de ausencias" style="max-width:800px;width:70vw;margin:0.5rem 0;border:1px solid #111;">
+<img src="assets/screenshots/Captura5.png" alt="Captura 5 — configuración y ayuda integrada" style="max-width:800px;width:70vw;margin:0.5rem 0;border:1px solid #111;">
 </div>
 
 
