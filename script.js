@@ -107,6 +107,7 @@ createApp({
         emailForm: "@iespoligonosur.org"
       },
       teacherScheduleTeacher: "",
+      teacherScheduleEntries: [],
       teacherScheduleGrid: SLOT_OPTIONS.map((slot) => ({
         slotValue: slot.value,
         slotLabel: slot.label,
@@ -208,6 +209,7 @@ createApp({
       this.loginForm.password = "";
       this.activeMenu = "ausencias";
       this.teacherScheduleTeacher = "";
+      this.teacherScheduleEntries = [];
       this.teacherScheduleGrid = this.buildEmptyTeacherScheduleGrid();
       this.loadingTeacherSchedule = false;
       this.teacherScheduleMessage = "";
@@ -698,73 +700,122 @@ createApp({
       );
       const slotIndexByValue = new Map(grid.map((row, index) => [row.slotValue, index]));
 
-      console.log("=== mapEntriesToTeacherSchedule ===");
-      console.log("Primer registro:", entries[0]);
-      console.log("Campos disponibles:", entries[0] ? Object.keys(entries[0]) : []);
+      const normalizedEntries = entries.map((entry) =>
+        entry.original ? entry : this.normalizeTimetableEntry(entry)
+      );
 
-      const sortedEntries = [...entries].sort((a, b) => {
-        const dayA = this.normalizeWeekdayValue(a) ?? 99;
-        const dayB = this.normalizeWeekdayValue(b) ?? 99;
+      const sortedEntries = [...normalizedEntries].sort((a, b) => {
+        const dayA = a.weekdayValue ?? 99;
+        const dayB = b.weekdayValue ?? 99;
         if (dayA === dayB) {
-          return (this.normalizeSlotValue(a) ?? 0) - (this.normalizeSlotValue(b) ?? 0);
+          return (a.slotValue ?? 0) - (b.slotValue ?? 0);
         }
         return dayA - dayB;
       });
 
       sortedEntries.forEach((entry) => {
-        const slotValue = this.normalizeSlotValue(entry);
-        const weekdayValue = this.normalizeWeekdayValue(entry);
-
-        console.log(`Entry: slot=${slotValue}, day=${weekdayValue}`);
-
-        if (!Number.isFinite(slotValue) || !dayIndexByValue.has(weekdayValue)) {
-          console.log(`  → Ignorada (slot o day inválidos)`);
+        if (!Number.isFinite(entry.slotValue) || !dayIndexByValue.has(entry.weekdayValue)) {
           return;
         }
 
-        const slotIndex = slotIndexByValue.get(slotValue);
+        const slotIndex = slotIndexByValue.get(entry.slotValue);
         if (slotIndex === undefined) {
-          console.log(`  → Ignorada (slot no en grid)`);
           return;
         }
 
-        const subject =
-          entry.subject || entry.subject_name || entry.materia || entry.asignatura || "—";
-        const group =
-          entry.group_name || entry.group || entry.class_group || entry.grupo || "";
-        const classroom =
-          entry.classroom || entry.classroom_name || entry.room || entry.aula || "";
-        const notes = entry.notes || entry.comments || entry.observaciones || "";
+        const dayIndex = dayIndexByValue.get(entry.weekdayValue);
 
-        const dayIndex = dayIndexByValue.get(weekdayValue);
-        
-        // Buscar si ya existe una entrada para esta aula en este slot/día
         const existingIndex = grid[slotIndex].days[dayIndex].findIndex(
-          (item) => item.classroom === classroom && item.subject === subject
+          (item) => item.classroom === entry.classroom && item.subject === entry.subject
         );
 
         if (existingIndex !== -1) {
-          // Unificar: añadir el grupo a la lista existente
           const existingItem = grid[slotIndex].days[dayIndex][existingIndex];
-          const groupSet = new Set(existingItem.group.split(", ").filter(g => g));
-          groupSet.add(group);
-          existingItem.group = Array.from(groupSet).join(", ");
+          if (entry.group) {
+            existingItem.groupSet.add(entry.group);
+            existingItem.group = Array.from(existingItem.groupSet).join(", ");
+          }
+          existingItem.entries.push(entry);
+          existingItem.visible = existingItem.visible && entry.visible;
         } else {
-          // Crear nueva entrada
           grid[slotIndex].days[dayIndex].push({
-            subject,
-            group,
-            classroom,
-            notes,
-            visible: this.isScheduleEntryVisible(entry)
+            subject: entry.subject,
+            group: entry.group,
+            groupSet: entry.group ? new Set([entry.group]) : new Set(),
+            classroom: entry.classroom,
+            visible: entry.visible,
+            weekdayValue: entry.weekdayValue,
+            slotValue: entry.slotValue,
+            entries: [entry],
+            editing: false,
+            editEntries: [],
+            editMessage: "",
+            editMessageType: "",
+            saving: false
           });
         }
-
-        console.log(`  → Añadida a grid[${slotIndex}].days[${dayIndex}]`);
       });
 
-      console.log("Grid final:", grid);
+      grid.forEach((row) => {
+        row.days = row.days.map((cells) =>
+          cells.map((cell) => ({
+            ...cell,
+            group: cell.group || Array.from(cell.groupSet).join(", "),
+            visible: cell.entries.every((entry) => entry.visible !== false)
+          }))
+        );
+      });
+
       return grid;
+    },
+    normalizeTimetableEntry(entry) {
+      const slotValue = this.normalizeSlotValue(entry);
+      const weekdayValue = this.normalizeWeekdayValue(entry);
+      const subject =
+        entry.subject || entry.subject_name || entry.materia || entry.asignatura || "—";
+      const group =
+        entry.group_name || entry.group || entry.class_group || entry.grupo || "";
+      const classroom =
+        entry.classroom || entry.classroom_name || entry.room || entry.aula || "";
+      return {
+        id: this.getTimetableEntryId(entry),
+        slotValue,
+        weekdayValue,
+        subject,
+        group,
+        classroom,
+        visible: this.isScheduleEntryVisible(entry),
+        original: entry,
+        slot: slotValue,
+        weekday: weekdayValue
+      };
+    },
+    getTimetableEntryId(entry) {
+      const candidates = [entry.id, entry.timetable_id, entry.uuid];
+      return candidates.find((value) => value !== undefined && value !== null) ?? null;
+    },
+    buildTimetableUpdatePayload(entry) {
+      const payload = {};
+      const subjectValue = entry.subject?.trim() || null;
+      const groupValue = entry.group?.trim() || null;
+      const classroomValue = entry.classroom?.trim() || null;
+      const visibleValue = entry.visible !== false;
+
+      const source = entry.original || {};
+
+      const assignField = (keys, value) => {
+        const key = keys.find((candidate) => candidate in source) || keys[0];
+        if (key) {
+          payload[key] = value;
+        }
+      };
+
+      assignField(["subject", "subject_name", "materia", "asignatura"], subjectValue);
+      assignField(["group_name", "group", "class_group", "grupo"], groupValue);
+      assignField(["classroom", "classroom_name", "room", "aula"], classroomValue);
+      assignField(["visible", "is_visible", "mostrar", "show_in_panel", "show"], visibleValue);
+
+      return payload;
     },
     matchesTeacherScheduleEntry(entry, teacherName) {
       if (!teacherName) {
@@ -833,8 +884,78 @@ createApp({
         return;
       }
 
-      this.teacherScheduleGrid = this.mapEntriesToTeacherSchedule(data);
+      this.teacherScheduleEntries = (data || []).map((entry) =>
+        this.normalizeTimetableEntry(entry)
+      );
+      this.teacherScheduleGrid = this.mapEntriesToTeacherSchedule(
+        this.teacherScheduleEntries
+      );
       this.loadingTeacherSchedule = false;
+    },
+    startClassInlineEdit(classInfo) {
+      if (classInfo.editing) {
+        return;
+      }
+
+      classInfo.editing = true;
+      classInfo.editMessage = "";
+      classInfo.editMessageType = "";
+      classInfo.saving = false;
+      classInfo.editEntries = (classInfo.entries || []).map((entry) => ({
+        ...entry,
+        subject: entry.subject || "",
+        group: entry.group || "",
+        classroom: entry.classroom || "",
+        visible: entry.visible !== false,
+        original: entry.original || entry
+      }));
+    },
+    cancelClassInlineEdit(classInfo) {
+      classInfo.editing = false;
+      classInfo.editEntries = [];
+      classInfo.editMessage = "";
+      classInfo.editMessageType = "";
+      classInfo.saving = false;
+    },
+    async saveClassInlineEdit(classInfo) {
+      if (!classInfo.editEntries?.length) {
+        return;
+      }
+
+      classInfo.saving = true;
+      classInfo.editMessage = "Guardando cambios…";
+      classInfo.editMessageType = "info";
+
+      try {
+        for (const entry of classInfo.editEntries) {
+          if (!entry.id) {
+            throw new Error("Hay clases sin identificador, no se pueden guardar.");
+          }
+
+          const payload = this.buildTimetableUpdatePayload(entry);
+          const { error } = await client
+            .from("timetable")
+            .update(payload)
+            .eq("id", entry.id);
+
+          if (error) {
+            throw error;
+          }
+        }
+
+        classInfo.editMessage = "Cambios guardados.";
+        classInfo.editMessageType = "ok";
+        await this.loadTeacherSchedule();
+      } catch (error) {
+        classInfo.editMessage = `No se pudieron guardar los cambios: ${error.message}`;
+        classInfo.editMessageType = "error";
+      } finally {
+        classInfo.saving = false;
+        setTimeout(() => {
+          classInfo.editMessage = "";
+          classInfo.editMessageType = "";
+        }, 2600);
+      }
     },
     formatDateForDisplay(dateString) {
       if (!dateString) return "";

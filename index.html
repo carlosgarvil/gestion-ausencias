@@ -199,12 +199,70 @@
                         :key="`class-${row.slotValue}-${index}-${idx}`"
                         class="schedule-class"
                         :class="{ 'schedule-class--hidden': !classInfo.visible }"
+                        @click="startClassInlineEdit(classInfo)"
                       >
-                        <p class="schedule-class-main">{{ classInfo.subject }}</p>
-                        <p v-if="classInfo.group" class="schedule-class-meta">{{ classInfo.group }}</p>
-                        <p v-if="classInfo.classroom" class="schedule-class-meta">Aula: {{ classInfo.classroom }}</p>
-                        <span v-if="!classInfo.visible" class="schedule-badge">No visible</span>
-                        <p v-if="classInfo.notes" class="schedule-class-notes">{{ classInfo.notes }}</p>
+                        <template v-if="!classInfo.editing">
+                          <p class="schedule-class-main">{{ classInfo.subject }}</p>
+                          <p v-if="classInfo.group" class="schedule-class-meta">{{ classInfo.group }}</p>
+                          <p v-if="classInfo.classroom" class="schedule-class-meta">Aula: {{ classInfo.classroom }}</p>
+                          <span v-if="!classInfo.visible" class="schedule-badge">No visible</span>
+                        </template>
+                        <div v-else class="schedule-class-edit">
+                          <p class="schedule-edit-help">Edita cada clase del tramo por separado.</p>
+                          <div
+                            v-for="(entry, editIndex) in classInfo.editEntries"
+                            :key="`edit-${classInfo.slotValue}-${classInfo.weekdayValue}-${entry.id || editIndex}`"
+                            class="schedule-edit-entry"
+                            @click.stop
+                          >
+                            <div class="schedule-edit-grid">
+                              <label class="schedule-edit-label">
+                                Materia
+                                <input type="text" v-model="entry.subject" />
+                              </label>
+                              <label class="schedule-edit-label">
+                                Grupo
+                                <input type="text" v-model="entry.group" />
+                              </label>
+                              <label class="schedule-edit-label">
+                                Aula
+                                <input type="text" v-model="entry.classroom" />
+                              </label>
+                              <label class="schedule-edit-toggle">
+                                <input type="checkbox" v-model="entry.visible" />
+                                Mostrar en panel
+                              </label>
+                            </div>
+                            <p v-if="!entry.id" class="schedule-edit-warning">
+                              No se puede guardar este bloque porque no tiene identificador.
+                            </p>
+                          </div>
+                          <div class="schedule-edit-actions" @click.stop>
+                            <button
+                              type="button"
+                              class="btn-save"
+                              @click="saveClassInlineEdit(classInfo)"
+                              :disabled="classInfo.saving"
+                            >
+                              Guardar
+                            </button>
+                            <button
+                              type="button"
+                              class="btn-secondary"
+                              @click="cancelClassInlineEdit(classInfo)"
+                              :disabled="classInfo.saving"
+                            >
+                              Cancelar
+                            </button>
+                            <span
+                              v-if="classInfo.editMessage"
+                              class="schedule-edit-message"
+                              :class="classInfo.editMessageType"
+                            >
+                              {{ classInfo.editMessage }}
+                            </span>
+                          </div>
+                        </div>
                       </article>
                     </div>
                     <div v-else class="schedule-cell schedule-cell--empty">—</div>
