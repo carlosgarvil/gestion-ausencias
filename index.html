@@ -206,7 +206,6 @@
                           <p v-if="classInfo.group" class="schedule-class-meta">{{ classInfo.group }}</p>
                           <p v-if="classInfo.classroom" class="schedule-class-meta">Aula: {{ classInfo.classroom }}</p>
                           <span v-if="!classInfo.visible" class="schedule-badge">No visible</span>
-                          <p v-if="classInfo.notes" class="schedule-class-notes">{{ classInfo.notes }}</p>
                         </template>
                         <div v-else class="schedule-class-edit">
                           <p class="schedule-edit-help">Edita cada clase del tramo por separado.</p>
@@ -228,10 +227,6 @@
                               <label class="schedule-edit-label">
                                 Aula
                                 <input type="text" v-model="entry.classroom" />
-                              </label>
-                              <label class="schedule-edit-label schedule-edit-notes">
-                                Notas / observaciones
-                                <textarea rows="2" v-model="entry.notes"></textarea>
                               </label>
                               <label class="schedule-edit-toggle">
                                 <input type="checkbox" v-model="entry.visible" />

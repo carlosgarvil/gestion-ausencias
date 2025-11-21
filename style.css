@@ -647,12 +647,6 @@ table tbody tr:hover td {
   color: #3d4a5c;
 }
 
-.schedule-class-notes {
-  margin: 0.2rem 0 0 0;
-  font-size: 0.8rem;
-  color: #555;
-}
-
 .schedule-badge {
   display: inline-block;
   margin-top: 0.2rem;
@@ -710,10 +704,6 @@ table tbody tr:hover td {
 
 .schedule-edit-label textarea {
   min-height: 54px;
-}
-
-.schedule-edit-notes {
-  grid-column: 1 / -1;
 }
 
 .schedule-edit-toggle {

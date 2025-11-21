@@ -743,7 +743,6 @@ createApp({
             group: entry.group,
             groupSet: entry.group ? new Set([entry.group]) : new Set(),
             classroom: entry.classroom,
-            notes: entry.notes,
             visible: entry.visible,
             weekdayValue: entry.weekdayValue,
             slotValue: entry.slotValue,
@@ -778,8 +777,6 @@ createApp({
         entry.group_name || entry.group || entry.class_group || entry.grupo || "";
       const classroom =
         entry.classroom || entry.classroom_name || entry.room || entry.aula || "";
-      const notes = entry.notes || entry.comments || entry.observaciones || "";
-
       return {
         id: this.getTimetableEntryId(entry),
         slotValue,
@@ -787,7 +784,6 @@ createApp({
         subject,
         group,
         classroom,
-        notes,
         visible: this.isScheduleEntryVisible(entry),
         original: entry,
         slot: slotValue,
@@ -803,7 +799,6 @@ createApp({
       const subjectValue = entry.subject?.trim() || null;
       const groupValue = entry.group?.trim() || null;
       const classroomValue = entry.classroom?.trim() || null;
-      const notesValue = entry.notes?.trim() || null;
       const visibleValue = entry.visible !== false;
 
       const source = entry.original || {};
@@ -818,7 +813,6 @@ createApp({
       assignField(["subject", "subject_name", "materia", "asignatura"], subjectValue);
       assignField(["group_name", "group", "class_group", "grupo"], groupValue);
       assignField(["classroom", "classroom_name", "room", "aula"], classroomValue);
-      assignField(["notes", "comments", "observaciones"], notesValue);
       assignField(["visible", "is_visible", "mostrar", "show_in_panel", "show"], visibleValue);
 
       return payload;
@@ -912,7 +906,6 @@ createApp({
         subject: entry.subject || "",
         group: entry.group || "",
         classroom: entry.classroom || "",
-        notes: entry.notes || "",
         visible: entry.visible !== false,
         original: entry.original || entry
       }));
