@@ -260,6 +260,19 @@ button:active {
 }
 
 /* ================================
+   BOTÓN NEUTRO → CANCELAR
+   ================================ */
+.btn-secondary {
+  background: #d7dce6;
+  color: #1f2a3d;
+  border: 1px solid #c3cad7;
+}
+
+.btn-secondary:hover {
+  background: #c8ceda;
+}
+
+/* ================================
    BOTÓN AZUL → ACTUALIZAR LISTA
    ================================ */
 .btn-refresh {
@@ -615,6 +628,7 @@ table tbody tr:hover td {
   padding: 0.35rem 0.45rem;
   background: #e9f3ff;
   border: 1px solid #c8e1ff;
+  cursor: pointer;
 }
 
 .schedule-class--hidden {
@@ -648,6 +662,90 @@ table tbody tr:hover td {
   font-weight: 600;
   color: #8a1c14;
   background: #ffe1dd;
+}
+
+.schedule-class-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.schedule-edit-help {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #2f3b4e;
+}
+
+.schedule-edit-entry {
+  border: 1px dashed #c8e1ff;
+  border-radius: 6px;
+  padding: 0.6rem;
+  background: #f6f9ff;
+}
+
+.schedule-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.6rem;
+}
+
+.schedule-edit-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-weight: 600;
+  color: #344055;
+  font-size: 0.9rem;
+}
+
+.schedule-edit-label input,
+.schedule-edit-label textarea {
+  width: 100%;
+  padding: 0.35rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #cdd8ea;
+  font-size: 0.95rem;
+  background: #fff;
+}
+
+.schedule-edit-label textarea {
+  min-height: 54px;
+}
+
+.schedule-edit-notes {
+  grid-column: 1 / -1;
+}
+
+.schedule-edit-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  color: #344055;
+}
+
+.schedule-edit-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.schedule-edit-message {
+  font-size: 0.9rem;
+}
+
+.schedule-edit-message.ok {
+  color: #0f7a39;
+}
+
+.schedule-edit-message.error {
+  color: #b32323;
+}
+
+.schedule-edit-warning {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+  color: #a36100;
 }
 
 /* Ajustes para selects y mensajes en la columna de estado */
