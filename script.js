@@ -78,7 +78,6 @@ createApp({
       loginMessage: "",
       loginMessageType: "",
       teachers: [],
-      substitutionTeachers: [],
       absenceForm: {
         teacher: "",
         dateFrom: "",
@@ -100,12 +99,14 @@ createApp({
       justifications: [],
       loadingJustifications: false,
       justificationsMessage: "",
-      substitutions: [],
       substitutionForm: {
         teacher: "",
-        displayName: "",
-        emailForm: "@iespoligonosur.org"
+        newTeacherName: "",
+        newTeacherEmail: "@iespoligonosur.org"
       },
+      substitutionMessage: "",
+      substitutionMessageType: "",
+      substitutionSaving: false,
       teacherScheduleTeacher: "",
       teacherScheduleEntries: [],
       teacherScheduleGrid: SLOT_OPTIONS.map((slot) => ({
@@ -202,7 +203,6 @@ createApp({
       this.panelMessage = "";
       this.loadingPanel = false;
       this.justifications = [];
-      this.substitutions = [];
       this.loadingJustifications = false;
       this.justificationsMessage = "";
       this.justificationsMonth = getCurrentMonthValue();
@@ -213,6 +213,12 @@ createApp({
       this.teacherScheduleGrid = this.buildEmptyTeacherScheduleGrid();
       this.loadingTeacherSchedule = false;
       this.teacherScheduleMessage = "";
+      this.substitutionForm.teacher = "";
+      this.substitutionForm.newTeacherName = "";
+      this.substitutionForm.newTeacherEmail = "@iespoligonosur.org";
+      this.substitutionMessage = "";
+      this.substitutionMessageType = "";
+      this.substitutionSaving = false;
     },
     handleAuthenticated(user) {
       this.isLoggedIn = true;
@@ -221,12 +227,11 @@ createApp({
       this.loadInitialData();
     },
     async loadInitialData() {
-      await Promise.all([this.populateTeachers(), this.populateSubstitutionTeachers()]);
+      await this.populateTeachers();
       this.setTodayDefaults();
       await this.loadAbsencesForDate();
       await this.loadPanelData();
       await this.loadJustifications();
-      await this.loadActiveSubstitutions();
       if (this.teacherScheduleTeacher) {
         await this.loadTeacherSchedule();
       }
@@ -244,20 +249,6 @@ createApp({
       }
 
       this.teachers = data || [];
-    },
-    async populateSubstitutionTeachers() {
-      const { data, error } = await client
-        .from("teachers")
-        .select("name, display_name, email, email_form")
-        .order("name", { ascending: true });
-
-      if (error) {
-        console.error("Error cargando profesores para sustituciones:", error);
-        this.substitutionTeachers = [];
-        return;
-      }
-
-      this.substitutionTeachers = data || [];
     },
     getDateRange(from, to) {
       if (!from) return [];
@@ -1043,67 +1034,115 @@ createApp({
       }
       this.absences = this.absences.filter((absence) => absence.id !== absenceId);
     },
-    async loadActiveSubstitutions() {
-      const { data, error } = await client
-        .from("teachers")
-        .select("name, display_name, email, email_form")
-        .order("name", { ascending: true });
-
-      if (error) {
-        console.error("Error cargando sustituciones activas:", error);
-        this.substitutions = [];
-        return;
-      }
-
-      this.substitutions = (data || []).filter(
-        (row) => row.email_form && row.email && row.email_form !== row.email
-      );
-    },
     async handleSubstitutionSubmit() {
-      const { teacher, displayName, emailForm } = this.substitutionForm;
-      if (!teacher || !displayName.trim() || !emailForm.trim()) {
-        alert("Completa titular, nombre y email del sustituto.");
+      const { teacher, newTeacherName, newTeacherEmail } = this.substitutionForm;
+      this.substitutionMessage = "";
+      this.substitutionMessageType = "";
+
+      const trimmedName = newTeacherName.trim();
+      const trimmedEmail = newTeacherEmail.trim().toLowerCase();
+
+      if (!teacher || !trimmedName || !trimmedEmail) {
+        this.substitutionMessage = "Completa titular, nombre y correo del nuevo profesor.";
+        this.substitutionMessageType = "error";
         return;
       }
 
-      const { error } = await client
-        .from("teachers")
-        .update({
-          display_name: displayName.trim(),
-          email_form: emailForm.trim()
-        })
-        .eq("name", teacher);
-
-      if (error) {
-        alert("Error al guardar la sustitución: " + error.message);
+      if (!trimmedEmail.endsWith("@iespoligonosur.org")) {
+        this.substitutionMessage = "El correo debe pertenecer al dominio @iespoligonosur.org.";
+        this.substitutionMessageType = "error";
         return;
       }
 
-      this.substitutionForm.teacher = "";
-      this.substitutionForm.displayName = "";
-      this.substitutionForm.emailForm = "@iespoligonosur.org";
-      await this.loadActiveSubstitutions();
-      await this.populateSubstitutionTeachers();
-    },
-    async removeSubstitution(row) {
-      const ok = confirm(`¿Quitar sustituto de "${row.name}" y volver al titular?`);
-      if (!ok) return;
+      this.substitutionSaving = true;
 
-      const { error } = await client
-        .from("teachers")
-        .update({
-          display_name: row.name,
-          email_form: row.email
-        })
-        .eq("name", row.name);
+      try {
+        const { data: existingByName, error: nameLookupError } = await client
+          .from("teachers")
+          .select("name")
+          .eq("name", trimmedName)
+          .limit(1);
 
-      if (error) {
-        alert("Error al quitar el sustituto: " + error.message);
-        return;
+        if (nameLookupError) {
+          throw new Error(`No se pudo comprobar el nombre: ${nameLookupError.message}`);
+        }
+
+        if (existingByName && existingByName.length) {
+          this.substitutionMessage = "Ya existe un profesor con ese nombre.";
+          this.substitutionMessageType = "error";
+          return;
+        }
+
+        const { data: existingByEmail, error: emailLookupError } = await client
+          .from("teachers")
+          .select("email")
+          .eq("email", trimmedEmail)
+          .limit(1);
+
+        if (emailLookupError) {
+          throw new Error(`No se pudo comprobar el correo: ${emailLookupError.message}`);
+        }
+
+        if (existingByEmail && existingByEmail.length) {
+          this.substitutionMessage = "Ya existe un profesor con ese correo.";
+          this.substitutionMessageType = "error";
+          return;
+        }
+
+        const { error: insertTeacherError } = await client.from("teachers").insert({
+          name: trimmedName,
+          display_name: trimmedName,
+          email: trimmedEmail,
+          email_form: trimmedEmail
+        });
+
+        if (insertTeacherError) {
+          throw new Error(`No se pudo crear el profesor: ${insertTeacherError.message}`);
+        }
+
+        const { data: timetableEntries, error: timetableError } = await client
+          .from("timetable")
+          .select("*")
+          .eq("teacher_name", teacher);
+
+        if (timetableError) {
+          throw new Error(`Profesor creado, pero no se pudo leer el horario: ${timetableError.message}`);
+        }
+
+        const rowsToInsert = (timetableEntries || []).map(
+          ({ id, created_at, updated_at, teacher_name: _originalTeacherName, ...entry }) => ({
+            ...entry,
+            teacher_name: trimmedName
+          })
+        );
+
+        let copiedCount = 0;
+        if (rowsToInsert.length) {
+          const { error: copyError } = await client.from("timetable").insert(rowsToInsert);
+          if (copyError) {
+            throw new Error(
+              `Profesor creado, pero no se pudo copiar el horario: ${copyError.message}`
+            );
+          }
+          copiedCount = rowsToInsert.length;
+        }
+
+        this.substitutionMessage = copiedCount
+          ? `Profesor creado y ${copiedCount} clase(s) copiadas desde ${teacher}.`
+          : `Profesor creado. No se encontraron clases para copiar de ${teacher}.`;
+        this.substitutionMessageType = "ok";
+        this.substitutionForm.teacher = "";
+        this.substitutionForm.newTeacherName = "";
+        this.substitutionForm.newTeacherEmail = "@iespoligonosur.org";
+        await this.populateTeachers();
+      } catch (error) {
+        console.error("Error copiando horario:", error);
+        this.substitutionMessage =
+          error?.message || "No se pudo completar la copia del horario.";
+        this.substitutionMessageType = "error";
+      } finally {
+        this.substitutionSaving = false;
       }
-
-      await this.loadActiveSubstitutions();
-      await this.populateSubstitutionTeachers();
     }
   }
 }).mount("#app");

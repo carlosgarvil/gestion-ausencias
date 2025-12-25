@@ -339,67 +339,52 @@
       </section>
 
       <section id="substitutions-section" v-show="activeMenu === 'sustituciones'">
-        <h2>🔁 Gestión de sustituciones</h2>
+        <h2>🔁 Copiar horario a un nuevo docente</h2>
         <p>
-          En caso de sustitución, las ausencias enviadas desde el formulario deben mostrar el nombre correcto en el
-          panel del centro.
-          Indica siempre el cambio respecto al <strong>docente titular</strong> y revierte la sustitución cuando
-          finalice.
+          Crea un nuevo profesor copiando el horario completo de un titular. El nuevo docente solo necesita
+          <strong>nombre</strong> (Apellidos, Nombre) y un <strong>correo @iespoligonosur.org</strong>.
+          Se insertará en la tabla <code>teachers</code> y se duplicarán todas las entradas de la tabla
+          <code>timetable</code> cuyo <code>teacher_name</code> coincida con el titular seleccionado.
         </p>
-        <p>Puede revertir la sustitución con el botón “Quitar sustituto”.</p>
 
         <div class="substitutions-layout">
           <div class="substitutions-block">
-            <h3>Sustituciones activas</h3>
-            <p class="absence-meta">Si el correo del formulario es distinto al del titular, se considera que hay una
-              sustitución activa.</p>
-            <table class="substitutions-table" v-if="substitutions.length">
-              <thead>
-                <tr>
-                  <th>Titular</th>
-                  <th>Nombre en panel</th>
-                  <th>Email formulario</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="row in substitutions" :key="row.email">
-                  <td>{{ row.name }}</td>
-                  <td>{{ row.display_name || row.name }}</td>
-                  <td>{{ row.email_form }}</td>
-                  <td>
-                    <button type="button" class="btn-delete" @click="removeSubstitution(row)">Quitar sustituto</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <p id="substitutions-empty" class="absence-meta" v-else>No hay sustituciones activas.</p>
-          </div>
-
-          <div class="substitutions-block">
-            <h3>Añadir / cambiar sustituto</h3>
+            <h3>Crear nuevo profesor desde titular</h3>
             <form id="substitution-form" @submit.prevent="handleSubstitutionSubmit">
               <label>
                 Profesor titular
                 <select v-model="substitutionForm.teacher" required>
                   <option value="">Selecciona titular…</option>
-                  <option v-for="teacher in substitutionTeachers" :key="teacher.name" :value="teacher.name">{{
-                    teacher.name }}</option>
+                  <option v-for="teacher in teachers" :key="teacher.name" :value="teacher.name">{{ teacher.name }}
+                  </option>
                 </select>
               </label>
 
               <label>
-                Nombre que se mostrará en el panel (Apellidos, Nombre)
-                <input type="text" v-model="substitutionForm.displayName" required />
+                Nombre del nuevo profesor (Apellidos, Nombre)
+                <input type="text" v-model="substitutionForm.newTeacherName" required />
               </label>
 
               <label>
-                Email del sustituto
-                <input type="email" v-model="substitutionForm.emailForm" required />
+                Correo @iespoligonosur.org
+                <input type="email" v-model="substitutionForm.newTeacherEmail" required />
               </label>
 
-              <button type="submit" class="btn-save">Guardar sustitución</button>
+              <button type="submit" class="btn-save" :disabled="substitutionSaving">Copiar horario al nuevo profesor</button>
+              <div v-if="substitutionMessage" class="message" :class="substitutionMessageType">
+                {{ substitutionMessage }}
+              </div>
             </form>
+          </div>
+
+          <div class="substitutions-block">
+            <h3>Cómo funciona</h3>
+            <ul>
+              <li>Se crea un nuevo registro en <code>teachers</code> con el nombre y correo indicados.</li>
+              <li>Se copian todas las filas de <code>timetable</code> cuyo <code>teacher_name</code> coincide con el
+                titular seleccionado.</li>
+              <li>El nuevo docente aparecerá en los selectores de la aplicación tras guardar la operación.</li>
+            </ul>
           </div>
         </div>
       </section>
