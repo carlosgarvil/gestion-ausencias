@@ -78,7 +78,6 @@ createApp({
       loginMessage: "",
       loginMessageType: "",
       teachers: [],
-      substitutionTeachers: [],
       absenceForm: {
         teacher: "",
         dateFrom: "",
@@ -100,13 +99,16 @@ createApp({
       justifications: [],
       loadingJustifications: false,
       justificationsMessage: "",
-      substitutions: [],
       substitutionForm: {
         teacher: "",
-        displayName: "",
-        emailForm: "@iespoligonosur.org"
+        newTeacherName: "",
+        newTeacherEmail: "@iespoligonosur.org"
       },
+      substitutionMessage: "",
+      substitutionMessageType: "",
+      substitutionSaving: false,
       teacherScheduleTeacher: "",
+      teacherScheduleEntries: [],
       teacherScheduleGrid: SLOT_OPTIONS.map((slot) => ({
         slotValue: slot.value,
         slotLabel: slot.label,
@@ -201,16 +203,22 @@ createApp({
       this.panelMessage = "";
       this.loadingPanel = false;
       this.justifications = [];
-      this.substitutions = [];
       this.loadingJustifications = false;
       this.justificationsMessage = "";
       this.justificationsMonth = getCurrentMonthValue();
       this.loginForm.password = "";
       this.activeMenu = "ausencias";
       this.teacherScheduleTeacher = "";
+      this.teacherScheduleEntries = [];
       this.teacherScheduleGrid = this.buildEmptyTeacherScheduleGrid();
       this.loadingTeacherSchedule = false;
       this.teacherScheduleMessage = "";
+      this.substitutionForm.teacher = "";
+      this.substitutionForm.newTeacherName = "";
+      this.substitutionForm.newTeacherEmail = "@iespoligonosur.org";
+      this.substitutionMessage = "";
+      this.substitutionMessageType = "";
+      this.substitutionSaving = false;
     },
     handleAuthenticated(user) {
       this.isLoggedIn = true;
@@ -219,12 +227,11 @@ createApp({
       this.loadInitialData();
     },
     async loadInitialData() {
-      await Promise.all([this.populateTeachers(), this.populateSubstitutionTeachers()]);
+      await this.populateTeachers();
       this.setTodayDefaults();
       await this.loadAbsencesForDate();
       await this.loadPanelData();
       await this.loadJustifications();
-      await this.loadActiveSubstitutions();
       if (this.teacherScheduleTeacher) {
         await this.loadTeacherSchedule();
       }
@@ -242,20 +249,6 @@ createApp({
       }
 
       this.teachers = data || [];
-    },
-    async populateSubstitutionTeachers() {
-      const { data, error } = await client
-        .from("teachers")
-        .select("name, display_name, email, email_form")
-        .order("name", { ascending: true });
-
-      if (error) {
-        console.error("Error cargando profesores para sustituciones:", error);
-        this.substitutionTeachers = [];
-        return;
-      }
-
-      this.substitutionTeachers = data || [];
     },
     getDateRange(from, to) {
       if (!from) return [];
@@ -698,73 +691,124 @@ createApp({
       );
       const slotIndexByValue = new Map(grid.map((row, index) => [row.slotValue, index]));
 
-      console.log("=== mapEntriesToTeacherSchedule ===");
-      console.log("Primer registro:", entries[0]);
-      console.log("Campos disponibles:", entries[0] ? Object.keys(entries[0]) : []);
+      const normalizedEntries = entries.map((entry) =>
+        entry.original ? entry : this.normalizeTimetableEntry(entry)
+      );
 
-      const sortedEntries = [...entries].sort((a, b) => {
-        const dayA = this.normalizeWeekdayValue(a) ?? 99;
-        const dayB = this.normalizeWeekdayValue(b) ?? 99;
+      const sortedEntries = [...normalizedEntries].sort((a, b) => {
+        const dayA = a.weekdayValue ?? 99;
+        const dayB = b.weekdayValue ?? 99;
         if (dayA === dayB) {
-          return (this.normalizeSlotValue(a) ?? 0) - (this.normalizeSlotValue(b) ?? 0);
+          return (a.slotValue ?? 0) - (b.slotValue ?? 0);
         }
         return dayA - dayB;
       });
 
       sortedEntries.forEach((entry) => {
-        const slotValue = this.normalizeSlotValue(entry);
-        const weekdayValue = this.normalizeWeekdayValue(entry);
-
-        console.log(`Entry: slot=${slotValue}, day=${weekdayValue}`);
-
-        if (!Number.isFinite(slotValue) || !dayIndexByValue.has(weekdayValue)) {
-          console.log(`  → Ignorada (slot o day inválidos)`);
+        if (!Number.isFinite(entry.slotValue) || !dayIndexByValue.has(entry.weekdayValue)) {
           return;
         }
 
-        const slotIndex = slotIndexByValue.get(slotValue);
+        const slotIndex = slotIndexByValue.get(entry.slotValue);
         if (slotIndex === undefined) {
-          console.log(`  → Ignorada (slot no en grid)`);
           return;
         }
 
-        const subject =
-          entry.subject || entry.subject_name || entry.materia || entry.asignatura || "—";
-        const group =
-          entry.group_name || entry.group || entry.class_group || entry.grupo || "";
-        const classroom =
-          entry.classroom || entry.classroom_name || entry.room || entry.aula || "";
-        const notes = entry.notes || entry.comments || entry.observaciones || "";
+        const dayIndex = dayIndexByValue.get(entry.weekdayValue);
 
-        const dayIndex = dayIndexByValue.get(weekdayValue);
-        
-        // Buscar si ya existe una entrada para esta aula en este slot/día
         const existingIndex = grid[slotIndex].days[dayIndex].findIndex(
-          (item) => item.classroom === classroom && item.subject === subject
+          (item) => item.classroom === entry.classroom && item.subject === entry.subject
         );
 
         if (existingIndex !== -1) {
-          // Unificar: añadir el grupo a la lista existente
           const existingItem = grid[slotIndex].days[dayIndex][existingIndex];
-          const groupSet = new Set(existingItem.group.split(", ").filter(g => g));
-          groupSet.add(group);
-          existingItem.group = Array.from(groupSet).join(", ");
+          if (entry.group) {
+            existingItem.groupSet.add(entry.group);
+            existingItem.group = Array.from(existingItem.groupSet).join(", ");
+          }
+          existingItem.entries.push(entry);
+          existingItem.visible = existingItem.visible && entry.visible;
         } else {
-          // Crear nueva entrada
           grid[slotIndex].days[dayIndex].push({
-            subject,
-            group,
-            classroom,
-            notes,
-            visible: this.isScheduleEntryVisible(entry)
+            subject: entry.subject,
+            group: entry.group,
+            groupSet: entry.group ? new Set([entry.group]) : new Set(),
+            classroom: entry.classroom,
+            visible: entry.visible,
+            weekdayValue: entry.weekdayValue,
+            slotValue: entry.slotValue,
+            entries: [entry],
+            editing: false,
+            editEntries: [],
+            editMessage: "",
+            editMessageType: "",
+            saving: false
           });
         }
-
-        console.log(`  → Añadida a grid[${slotIndex}].days[${dayIndex}]`);
       });
 
-      console.log("Grid final:", grid);
+      grid.forEach((row) => {
+        row.days = row.days.map((cells) =>
+          cells.map((cell) => ({
+            ...cell,
+            group: cell.group || Array.from(cell.groupSet).join(", "),
+            visible: cell.entries.every((entry) => entry.visible !== false)
+          }))
+        );
+      });
+
       return grid;
+    },
+    normalizeTimetableEntry(entry) {
+      const slotValue = this.normalizeSlotValue(entry);
+      const weekdayValue = this.normalizeWeekdayValue(entry);
+      const subject =
+        entry.subject || entry.subject_name || entry.materia || entry.asignatura || "—";
+      const group =
+        entry.group_name || entry.group || entry.class_group || entry.grupo || "";
+      const classroom =
+        entry.classroom || entry.classroom_name || entry.room || entry.aula || "";
+      return {
+        id: this.getTimetableEntryId(entry),
+        slotValue,
+        weekdayValue,
+        subject,
+        group,
+        classroom,
+        visible: this.isScheduleEntryVisible(entry),
+        original: entry,
+        slot: slotValue,
+        weekday: weekdayValue
+      };
+    },
+    getTimetableEntryId(entry) {
+      const candidates = [entry.id, entry.timetable_id, entry.uuid];
+      return candidates.find((value) => value !== undefined && value !== null) ?? null;
+    },
+    buildTimetableUpdatePayload(entry) {
+      const payload = {};
+      // Según el esquema, subject y group_name son NOT NULL.
+      // Usamos cadena vacía en lugar de null para evitar errores de restricción.
+      const subjectValue = entry.subject?.trim() || "";
+      const groupValue = entry.group?.trim() || "";
+      const classroomValue = entry.classroom?.trim() || null; // classroom es nullable
+      const visibleValue = entry.visible !== false;
+
+      const source = entry.original || {};
+
+      const assignField = (keys, value) => {
+        const key = keys.find((candidate) => candidate in source) || keys[0];
+        if (key) {
+          payload[key] = value;
+        }
+      };
+
+      assignField(["subject", "subject_name", "materia", "asignatura"], subjectValue);
+      assignField(["group_name", "group", "class_group", "grupo"], groupValue);
+      assignField(["classroom", "classroom_name", "room", "aula"], classroomValue);
+      assignField(["visible", "is_visible", "mostrar", "show_in_panel", "show"], visibleValue);
+
+      return payload;
     },
     matchesTeacherScheduleEntry(entry, teacherName) {
       if (!teacherName) {
@@ -826,15 +870,98 @@ createApp({
         // Obtén todos los nombres para comparar
         const { data: allData } = await client.from("timetable").select("teacher_name");
         console.log("Nombres disponibles en BD:", allData?.map(d => d.teacher_name) || []);
-        
+
         this.teacherScheduleMessage = "No hay clases registradas para este docente.";
         this.teacherScheduleGrid = this.buildEmptyTeacherScheduleGrid();
         this.loadingTeacherSchedule = false;
         return;
       }
 
-      this.teacherScheduleGrid = this.mapEntriesToTeacherSchedule(data);
+      this.teacherScheduleEntries = (data || []).map((entry) =>
+        this.normalizeTimetableEntry(entry)
+      );
+      this.teacherScheduleGrid = this.mapEntriesToTeacherSchedule(
+        this.teacherScheduleEntries
+      );
       this.loadingTeacherSchedule = false;
+    },
+    startClassInlineEdit(classInfo) {
+      if (classInfo.editing) {
+        return;
+      }
+
+      classInfo.editing = true;
+      classInfo.editMessage = "";
+      classInfo.editMessageType = "";
+      classInfo.saving = false;
+      classInfo.editEntries = (classInfo.entries || []).map((entry) => ({
+        ...entry,
+        subject: entry.subject || "",
+        group: entry.group || "",
+        classroom: entry.classroom || "",
+        visible: entry.visible !== false,
+        original: entry.original || entry
+      }));
+    },
+    cancelClassInlineEdit(classInfo) {
+      classInfo.editing = false;
+      classInfo.editEntries = [];
+      classInfo.editMessage = "";
+      classInfo.editMessageType = "";
+      classInfo.saving = false;
+    },
+    async saveClassInlineEdit(classInfo) {
+      if (!classInfo.editEntries?.length) {
+        return;
+      }
+
+      classInfo.saving = true;
+      classInfo.editMessage = "Guardando cambios…";
+      classInfo.editMessageType = "info";
+
+      try {
+        for (const entry of classInfo.editEntries) {
+          // El esquema confirma que la columna es 'id'
+          const idValue = entry.id || this.getTimetableEntryId(entry.original || {});
+
+          if (idValue === null || idValue === undefined) {
+            throw new Error("Hay clases sin identificador, no se pueden guardar.");
+          }
+
+          const payload = this.buildTimetableUpdatePayload(entry);
+
+          // Limpieza de campos que no deben ir en el update (especialmente el ID)
+          const cleanPayload = { ...payload };
+          delete cleanPayload.id;
+          delete cleanPayload.timetable_id;
+          delete cleanPayload.uuid;
+
+          console.log("Actualizando entrada ID:", idValue, "con payload:", cleanPayload);
+
+          const { error } = await client
+            .from("timetable")
+            .update(cleanPayload)
+            .eq("id", idValue);
+
+          if (error) {
+            console.error("Error de Supabase al actualizar:", error);
+            throw error;
+          }
+        }
+
+        classInfo.editMessage = "Cambios guardados.";
+        classInfo.editMessageType = "ok";
+        await this.loadTeacherSchedule();
+      } catch (error) {
+        classInfo.editMessage = `No se pudieron guardar los cambios: ${error.message}`;
+        classInfo.editMessageType = "error";
+      } finally {
+        classInfo.saving = false;
+        setTimeout(() => {
+          classInfo.editMessage = "";
+          classInfo.editMessageType = "";
+        }, 2600);
+      }
     },
     formatDateForDisplay(dateString) {
       if (!dateString) return "";
@@ -927,67 +1054,115 @@ createApp({
       }
       this.absences = this.absences.filter((absence) => absence.id !== absenceId);
     },
-    async loadActiveSubstitutions() {
-      const { data, error } = await client
-        .from("teachers")
-        .select("name, display_name, email, email_form")
-        .order("name", { ascending: true });
-
-      if (error) {
-        console.error("Error cargando sustituciones activas:", error);
-        this.substitutions = [];
-        return;
-      }
-
-      this.substitutions = (data || []).filter(
-        (row) => row.email_form && row.email && row.email_form !== row.email
-      );
-    },
     async handleSubstitutionSubmit() {
-      const { teacher, displayName, emailForm } = this.substitutionForm;
-      if (!teacher || !displayName.trim() || !emailForm.trim()) {
-        alert("Completa titular, nombre y email del sustituto.");
+      const { teacher, newTeacherName, newTeacherEmail } = this.substitutionForm;
+      this.substitutionMessage = "";
+      this.substitutionMessageType = "";
+
+      const trimmedName = newTeacherName.trim();
+      const trimmedEmail = newTeacherEmail.trim().toLowerCase();
+
+      if (!teacher || !trimmedName || !trimmedEmail) {
+        this.substitutionMessage = "Completa titular, nombre y correo del nuevo profesor.";
+        this.substitutionMessageType = "error";
         return;
       }
 
-      const { error } = await client
-        .from("teachers")
-        .update({
-          display_name: displayName.trim(),
-          email_form: emailForm.trim()
-        })
-        .eq("name", teacher);
-
-      if (error) {
-        alert("Error al guardar la sustitución: " + error.message);
+      if (!trimmedEmail.endsWith("@iespoligonosur.org")) {
+        this.substitutionMessage = "El correo debe pertenecer al dominio @iespoligonosur.org.";
+        this.substitutionMessageType = "error";
         return;
       }
 
-      this.substitutionForm.teacher = "";
-      this.substitutionForm.displayName = "";
-      this.substitutionForm.emailForm = "@iespoligonosur.org";
-      await this.loadActiveSubstitutions();
-      await this.populateSubstitutionTeachers();
-    },
-    async removeSubstitution(row) {
-      const ok = confirm(`¿Quitar sustituto de "${row.name}" y volver al titular?`);
-      if (!ok) return;
+      this.substitutionSaving = true;
 
-      const { error } = await client
-        .from("teachers")
-        .update({
-          display_name: row.name,
-          email_form: row.email
-        })
-        .eq("name", row.name);
+      try {
+        const { data: existingByName, error: nameLookupError } = await client
+          .from("teachers")
+          .select("name")
+          .eq("name", trimmedName)
+          .limit(1);
 
-      if (error) {
-        alert("Error al quitar el sustituto: " + error.message);
-        return;
+        if (nameLookupError) {
+          throw new Error(`No se pudo comprobar el nombre: ${nameLookupError.message}`);
+        }
+
+        if (existingByName && existingByName.length) {
+          this.substitutionMessage = "Ya existe un profesor con ese nombre.";
+          this.substitutionMessageType = "error";
+          return;
+        }
+
+        const { data: existingByEmail, error: emailLookupError } = await client
+          .from("teachers")
+          .select("email")
+          .eq("email", trimmedEmail)
+          .limit(1);
+
+        if (emailLookupError) {
+          throw new Error(`No se pudo comprobar el correo: ${emailLookupError.message}`);
+        }
+
+        if (existingByEmail && existingByEmail.length) {
+          this.substitutionMessage = "Ya existe un profesor con ese correo.";
+          this.substitutionMessageType = "error";
+          return;
+        }
+
+        const { error: insertTeacherError } = await client.from("teachers").insert({
+          name: trimmedName,
+          display_name: trimmedName,
+          email: trimmedEmail,
+          email_form: trimmedEmail
+        });
+
+        if (insertTeacherError) {
+          throw new Error(`No se pudo crear el profesor: ${insertTeacherError.message}`);
+        }
+
+        const { data: timetableEntries, error: timetableError } = await client
+          .from("timetable")
+          .select("*")
+          .eq("teacher_name", teacher);
+
+        if (timetableError) {
+          throw new Error(`Profesor creado, pero no se pudo leer el horario: ${timetableError.message}`);
+        }
+
+        const rowsToInsert = (timetableEntries || []).map(
+          ({ id, created_at, updated_at, teacher_name: _originalTeacherName, ...entry }) => ({
+            ...entry,
+            teacher_name: trimmedName
+          })
+        );
+
+        let copiedCount = 0;
+        if (rowsToInsert.length) {
+          const { error: copyError } = await client.from("timetable").insert(rowsToInsert);
+          if (copyError) {
+            throw new Error(
+              `Profesor creado, pero no se pudo copiar el horario: ${copyError.message}`
+            );
+          }
+          copiedCount = rowsToInsert.length;
+        }
+
+        this.substitutionMessage = copiedCount
+          ? `Profesor creado y ${copiedCount} clase(s) copiadas desde ${teacher}.`
+          : `Profesor creado. No se encontraron clases para copiar de ${teacher}.`;
+        this.substitutionMessageType = "ok";
+        this.substitutionForm.teacher = "";
+        this.substitutionForm.newTeacherName = "";
+        this.substitutionForm.newTeacherEmail = "@iespoligonosur.org";
+        await this.populateTeachers();
+      } catch (error) {
+        console.error("Error copiando horario:", error);
+        this.substitutionMessage =
+          error?.message || "No se pudo completar la copia del horario.";
+        this.substitutionMessageType = "error";
+      } finally {
+        this.substitutionSaving = false;
       }
-
-      await this.loadActiveSubstitutions();
-      await this.populateSubstitutionTeachers();
     }
   }
 }).mount("#app");

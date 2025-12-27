@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="UTF-8" />
   <title>Gestión de ausencias - IES Polígono Sur</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="style.css" />
 </head>
+
 <body>
   <div id="app">
     <h1>Gestión de ausencias del profesorado</h1>
@@ -37,14 +39,8 @@
       </header>
 
       <nav class="top-nav">
-        <button
-          v-for="item in menuItems"
-          :key="item.value"
-          type="button"
-          class="nav-link"
-          :class="{ active: activeMenu === item.value }"
-          @click="activeMenu = item.value"
-        >
+        <button v-for="item in menuItems" :key="item.value" type="button" class="nav-link"
+          :class="{ active: activeMenu === item.value }" @click="activeMenu = item.value">
           {{ item.label }}
         </button>
       </nav>
@@ -55,14 +51,16 @@
             <h2>Registro de ausencias</h2>
             <ul>
               <li>📅 <strong>Una fecha</strong> → crea una ausencia individual.</li>
-              <li>🗓️ <strong>Con "Fecha hasta"</strong> → se genera una ausencia por cada día en el rango indicado.</li>
+              <li>🗓️ <strong>Con "Fecha hasta"</strong> → se genera una ausencia por cada día en el rango indicado.
+              </li>
             </ul>
             <form id="absence-form" @submit.prevent="handleAbsenceSubmit">
               <label>
                 Docente
                 <select v-model="absenceForm.teacher" required>
                   <option value="">Selecciona…</option>
-                  <option v-for="teacher in teachers" :key="teacher.name" :value="teacher.name">{{ teacher.name }}</option>
+                  <option v-for="teacher in teachers" :key="teacher.name" :value="teacher.name">{{ teacher.name }}
+                  </option>
                 </select>
               </label>
 
@@ -86,7 +84,8 @@
               <label>
                 Hora final (tramo)
                 <select v-model.number="absenceForm.endSlot" required>
-                  <option v-for="slot in slotOptions" :key="`end-${slot.value}`" :value="slot.value">{{ slot.label }}</option>
+                  <option v-for="slot in slotOptions" :key="`end-${slot.value}`" :value="slot.value">{{ slot.label }}
+                  </option>
                 </select>
               </label>
 
@@ -106,7 +105,8 @@
               Fecha
               <input type="date" v-model="listDate" />
             </label>
-            <button type="button" id="btn-refresh-list" class="btn-refresh" @click="loadAbsencesForDate">Actualizar</button>
+            <button type="button" id="btn-refresh-list" class="btn-refresh"
+              @click="loadAbsencesForDate">Actualizar</button>
 
             <div id="list-container" class="absence-list">
               <p v-if="loadingAbsences">Cargando ausencias…</p>
@@ -124,21 +124,19 @@
                   <p class="absence-edit-title">Editar tramos</p>
                   <div class="absence-edit-controls">
                     <select v-model.number="absence.editStart">
-                      <option v-for="slot in slotOptions" :key="`edit-start-${slot.value}`" :value="slot.value">{{ slot.label }}</option>
+                      <option v-for="slot in slotOptions" :key="`edit-start-${slot.value}`" :value="slot.value">{{
+                        slot.label }}</option>
                     </select>
                     <select v-model.number="absence.editEnd">
-                      <option v-for="slot in slotOptions" :key="`edit-end-${slot.value}`" :value="slot.value">{{ slot.label }}</option>
+                      <option v-for="slot in slotOptions" :key="`edit-end-${slot.value}`" :value="slot.value">{{
+                        slot.label }}</option>
                     </select>
                   </div>
                   <div class="absence-edit-buttons">
                     <button type="button" class="btn-save" @click="saveAbsenceSlots(absence)">Guardar</button>
                     <button type="button" @click="cancelAbsenceEdit(absence)">Cancelar</button>
                   </div>
-                  <div
-                    v-if="absence.editMessage"
-                    class="absence-edit-message"
-                    :class="absence.editMessageType"
-                  >
+                  <div v-if="absence.editMessage" class="absence-edit-message" :class="absence.editMessageType">
                     {{ absence.editMessage }}
                   </div>
                 </div>
@@ -166,12 +164,8 @@
                 </option>
               </select>
             </label>
-            <button
-              type="button"
-              class="btn-refresh"
-              @click="loadTeacherSchedule"
-              :disabled="!teacherScheduleTeacher || loadingTeacherSchedule"
-            >
+            <button type="button" class="btn-refresh" @click="loadTeacherSchedule"
+              :disabled="!teacherScheduleTeacher || loadingTeacherSchedule">
               Actualizar
             </button>
           </div>
@@ -194,17 +188,57 @@
                   <th>{{ row.slotLabel }}</th>
                   <td v-for="(cell, index) in row.days" :key="`cell-${row.slotValue}-${index}`">
                     <div v-if="cell.length" class="schedule-cell">
-                      <article
-                        v-for="(classInfo, idx) in cell"
-                        :key="`class-${row.slotValue}-${index}-${idx}`"
-                        class="schedule-class"
-                        :class="{ 'schedule-class--hidden': !classInfo.visible }"
-                      >
-                        <p class="schedule-class-main">{{ classInfo.subject }}</p>
-                        <p v-if="classInfo.group" class="schedule-class-meta">{{ classInfo.group }}</p>
-                        <p v-if="classInfo.classroom" class="schedule-class-meta">Aula: {{ classInfo.classroom }}</p>
-                        <span v-if="!classInfo.visible" class="schedule-badge">No visible</span>
-                        <p v-if="classInfo.notes" class="schedule-class-notes">{{ classInfo.notes }}</p>
+                      <article v-for="(classInfo, idx) in cell" :key="`class-${row.slotValue}-${index}-${idx}`"
+                        class="schedule-class" :class="{ 'schedule-class--hidden': !classInfo.visible }"
+                        @click="startClassInlineEdit(classInfo)">
+                        <template v-if="!classInfo.editing">
+                          <p class="schedule-class-main">{{ classInfo.subject }}</p>
+                          <p v-if="classInfo.group" class="schedule-class-meta">{{ classInfo.group }}</p>
+                          <p v-if="classInfo.classroom" class="schedule-class-meta">Aula: {{ classInfo.classroom }}</p>
+                          <span v-if="!classInfo.visible" class="schedule-badge">No visible</span>
+                        </template>
+                        <div v-else class="schedule-class-edit">
+                          <p class="schedule-edit-help">Edita cada clase del tramo por separado.</p>
+                          <div v-for="(entry, editIndex) in classInfo.editEntries"
+                            :key="`edit-${classInfo.slotValue}-${classInfo.weekdayValue}-${entry.id || editIndex}`"
+                            class="schedule-edit-entry" @click.stop>
+                            <div class="schedule-edit-grid">
+                              <label class="schedule-edit-label">
+                                Materia
+                                <input type="text" v-model="entry.subject" />
+                              </label>
+                              <label class="schedule-edit-label">
+                                Grupo
+                                <input type="text" v-model="entry.group" />
+                              </label>
+                              <label class="schedule-edit-label">
+                                Aula
+                                <input type="text" v-model="entry.classroom" />
+                              </label>
+                              <label class="schedule-edit-toggle">
+                                <input type="checkbox" v-model="entry.visible" />
+                                Mostrar en panel
+                              </label>
+                            </div>
+                            <p v-if="!entry.id" class="schedule-edit-warning">
+                              No se puede guardar este bloque porque no tiene identificador.
+                            </p>
+                          </div>
+                          <div class="schedule-edit-actions" @click.stop>
+                            <button type="button" class="btn-save" @click="saveClassInlineEdit(classInfo)"
+                              :disabled="classInfo.saving">
+                              Guardar
+                            </button>
+                            <button type="button" class="btn-secondary" @click="cancelClassInlineEdit(classInfo)"
+                              :disabled="classInfo.saving">
+                              Cancelar
+                            </button>
+                            <span v-if="classInfo.editMessage" class="schedule-edit-message"
+                              :class="classInfo.editMessageType">
+                              {{ classInfo.editMessage }}
+                            </span>
+                          </div>
+                        </div>
                       </article>
                     </div>
                     <div v-else class="schedule-cell schedule-cell--empty">—</div>
@@ -287,24 +321,14 @@
                 <td>{{ justification.start_slot }}</td>
                 <td>{{ justification.end_slot }}</td>
                 <td>
-                  <select
-                    class="status-select"
-                    :value="justification.status"
-                    @change="updateJustificationStatus(justification, $event.target.value)"
-                  >
-                    <option
-                      v-for="option in justificationStatusOptions"
-                      :key="option.value"
-                      :value="option.value"
-                    >
+                  <select class="status-select" :value="justification.status"
+                    @change="updateJustificationStatus(justification, $event.target.value)">
+                    <option v-for="option in justificationStatusOptions" :key="option.value" :value="option.value">
                       {{ option.label }}
                     </option>
                   </select>
-                  <span
-                    v-if="justification.statusMessage"
-                    class="status-message"
-                    :class="justification.statusMessageType"
-                  >
+                  <span v-if="justification.statusMessage" class="status-message"
+                    :class="justification.statusMessageType">
                     {{ justification.statusMessage }}
                   </span>
                 </td>
@@ -315,63 +339,53 @@
       </section>
 
       <section id="substitutions-section" v-show="activeMenu === 'sustituciones'">
-        <h2>🔁 Gestión de sustituciones</h2>
+        <h2>🔁 Copiar horario a un nuevo docente</h2>
         <p>
-          En caso de sustitución, las ausencias enviadas desde el formulario deben mostrar el nombre correcto en el panel del centro.
-          Indica siempre el cambio respecto al <strong>docente titular</strong> y revierte la sustitución cuando finalice.
+          Crea un nuevo profesor copiando el horario completo de un titular. El nuevo docente solo necesita
+          <strong>nombre</strong> (Apellidos, Nombre) y un <strong>correo @iespoligonosur.org</strong>.
+          Se insertará en la tabla <code>teachers</code> y se duplicarán todas las entradas de la tabla
+          <code>timetable</code> cuyo <code>teacher_name</code> coincida con el titular seleccionado.
         </p>
-        <p>Puede revertir la sustitución con el botón “Quitar sustituto”.</p>
 
         <div class="substitutions-layout">
           <div class="substitutions-block">
-            <h3>Sustituciones activas</h3>
-            <p class="absence-meta">Si el correo del formulario es distinto al del titular, se considera que hay una sustitución activa.</p>
-            <table class="substitutions-table" v-if="substitutions.length">
-              <thead>
-                <tr>
-                  <th>Titular</th>
-                  <th>Nombre en panel</th>
-                  <th>Email formulario</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="row in substitutions" :key="row.email">
-                  <td>{{ row.name }}</td>
-                  <td>{{ row.display_name || row.name }}</td>
-                  <td>{{ row.email_form }}</td>
-                  <td>
-                    <button type="button" class="btn-delete" @click="removeSubstitution(row)">Quitar sustituto</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <p id="substitutions-empty" class="absence-meta" v-else>No hay sustituciones activas.</p>
-          </div>
-
-          <div class="substitutions-block">
-            <h3>Añadir / cambiar sustituto</h3>
+            <h3>Crear nuevo profesor desde titular</h3>
             <form id="substitution-form" @submit.prevent="handleSubstitutionSubmit">
               <label>
                 Profesor titular
                 <select v-model="substitutionForm.teacher" required>
                   <option value="">Selecciona titular…</option>
-                  <option v-for="teacher in substitutionTeachers" :key="teacher.name" :value="teacher.name">{{ teacher.name }}</option>
+                  <option v-for="teacher in teachers" :key="teacher.name" :value="teacher.name">{{ teacher.name }}
+                  </option>
                 </select>
               </label>
 
               <label>
-                Nombre que se mostrará en el panel (Apellidos, Nombre)
-                <input type="text" v-model="substitutionForm.displayName" required />
+                Nombre del nuevo profesor (Apellidos, Nombre)
+                <input type="text" v-model="substitutionForm.newTeacherName" required />
               </label>
 
               <label>
-                Email del sustituto
-                <input type="email" v-model="substitutionForm.emailForm" required />
+                Correo @iespoligonosur.org
+                <input type="email" v-model="substitutionForm.newTeacherEmail" required />
               </label>
 
-              <button type="submit" class="btn-save">Guardar sustitución</button>
+              <button type="submit" class="btn-save" :disabled="substitutionSaving">Copiar horario al nuevo
+                profesor</button>
+              <div v-if="substitutionMessage" class="message" :class="substitutionMessageType">
+                {{ substitutionMessage }}
+              </div>
             </form>
+          </div>
+
+          <div class="substitutions-block">
+            <h3>Cómo funciona</h3>
+            <ul>
+              <li>Se crea un nuevo registro en <code>teachers</code> con el nombre y correo indicados.</li>
+              <li>Se copian todas las filas de <code>timetable</code> cuyo <code>teacher_name</code> coincide con el
+                titular seleccionado.</li>
+              <li>El nuevo docente aparecerá en los selectores de la aplicación tras guardar la operación.</li>
+            </ul>
           </div>
         </div>
       </section>
@@ -382,29 +396,42 @@
           <h3>Cuándo registrar una ausencia</h3>
           <ul>
             <li>Usa el formulario de “Registro de ausencias” para comunicar ausencias planificadas o sobrevenidas.</li>
-            <li>Para ausencias de varios días, utiliza los campos <strong>Fecha desde</strong> y <strong>Fecha hasta</strong>. El sistema genera un registro diario.</li>
-            <li>Completa los tramos horarios afectados. Puedes modificarlos posteriormente desde la lista de ausencias.</li>
-            <li>Las ausencias se guardan automáticamente cuando el profesorado rellena el formulario de Google Classroom; por tanto pueden aparecer registradas sin intervención manual en esta aplicación.</li>
-            <li>Por defecto, las ausencias creadas se marcan como ausencia de día completo (tramos <strong>1–14</strong>). Si el profesor se reincorpora durante la jornada, edita los tramos de esa ausencia para eliminar los tramos ya cubiertos y evitar que siga apareciendo en el panel.</li>
-            <li>El panel muestra exactamente la información que se visualiza en la TV de la Sala del Profesorado: cualquier cambio en los tramos en este sistema se reflejará en dicha TV tras actualizar el panel.</li>
+            <li>Para ausencias de varios días, utiliza los campos <strong>Fecha desde</strong> y <strong>Fecha
+                hasta</strong>. El sistema genera un registro diario.</li>
+            <li>Completa los tramos horarios afectados. Puedes modificarlos posteriormente desde la lista de ausencias.
+            </li>
+            <li>Las ausencias se guardan automáticamente cuando el profesorado rellena el formulario de Google
+              Classroom; por tanto pueden aparecer registradas sin intervención manual en esta aplicación.</li>
+            <li>Por defecto, las ausencias creadas se marcan como ausencia de día completo (tramos
+              <strong>1–14</strong>). Si el profesor se reincorpora durante la jornada, edita los tramos de esa ausencia
+              para eliminar los tramos ya cubiertos y evitar que siga apareciendo en el panel.
+            </li>
+            <li>El panel muestra exactamente la información que se visualiza en la TV de la Sala del Profesorado:
+              cualquier cambio en los tramos en este sistema se reflejará en dicha TV tras actualizar el panel.</li>
           </ul>
         </article>
 
         <article class="help-block">
           <h3>Consulta de ausencias por fecha</h3>
           <ul>
-            <li>Selecciona un día en “Ausencias del día” y pulsa <strong>Actualizar</strong> para ver los registros ordenados por docente.</li>
-            <li>Pulsa sobre una ausencia para editar los tramos y usa el botón rojo para eliminarla si ha sido un error.</li>
-            <li>La información sensible (motivos) nunca aparece en los paneles públicos, solo en esta vista protegida.</li>
+            <li>Selecciona un día en “Ausencias del día” y pulsa <strong>Actualizar</strong> para ver los registros
+              ordenados por docente.</li>
+            <li>Pulsa sobre una ausencia para editar los tramos y usa el botón rojo para eliminarla si ha sido un error.
+            </li>
+            <li>La información sensible (motivos) nunca aparece en los paneles públicos, solo en esta vista protegida.
+            </li>
           </ul>
         </article>
 
         <article class="help-block">
           <h3>Gestión de sustituciones</h3>
           <ul>
-            <li>El panel de clases a cubrir identifica automáticamente una sustitución cuando el correo del formulario difiere del titular.</li>
-            <li>Desde la pestaña “Sustituciones” puedes asignar el nombre y correo del sustituto para que el panel muestre los datos correctos.</li>
-            <li>Cuando el titular se reincorpore, usa “Quitar sustituto” para volver a mostrar su nombre y correo.</li>
+            <li>Desde la pestaña “Sustituciones” puedes crear un nuevo profesor copiando el horario completo de un
+              titular.</li>
+            <li>El nuevo docente necesita un nombre (Apellidos, Nombre) y un correo @iespoligonosur.org.</li>
+            <li>Al realizar la copia, se duplican todas las entradas del horario del titular para el nuevo docente.</li>
+            <li>El nuevo profesor aparecerá automáticamente en los selectores de la aplicación para registrar sus
+              propias ausencias.</li>
           </ul>
         </article>
 
@@ -412,7 +439,8 @@
           <h3>Seguridad y acceso</h3>
           <ul>
             <li>El acceso se realiza mediante Supabase Auth. No compartas tu cuenta.</li>
-            <li>Las tablas `teachers`, `absences` y el horario están protegidos con RLS en Supabase para evitar accesos no autorizados.</li>
+            <li>Las tablas `teachers`, `absences` y el horario están protegidos con RLS en Supabase para evitar accesos
+              no autorizados.</li>
             <li>El panel público solo expone la información imprescindible para la organización diaria.</li>
           </ul>
         </article>
@@ -424,4 +452,5 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="script.js"></script>
 </body>
+
 </html>
