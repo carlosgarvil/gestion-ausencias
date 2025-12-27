@@ -1,88 +1,83 @@
 # Gestión de Ausencias del Profesorado — IES Polígono Sur
 
-Este proyecto proporciona una solución web completa para la **gestión de ausencias del profesorado**, generación automática de clases a cubrir y administración de sustituciones.  
-El sistema está diseñado para su uso interno en el centro y se integra con Google Forms, Google Apps Script y Supabase.
-
----
-
-## ✨ Funcionalidades principales
-
-### ✔ Registro de ausencias previstas
-- Formulario para registrar ausencias individuales.
-- Opción de seleccionar un **rango de fechas**, generando una ausencia independiente por cada día.
-- Permite modificar/eliminar solo algunos días cuando un docente se reincorpora antes de lo esperado.
-
-### ✔ Consulta de ausencias por fecha
-- Selector de día para visualizar rápidamente todas las ausencias registradas.
-- Botón de actualización y opciones para eliminar ausencias específicas.
-- Vista organizada por profesor y fecha.
-
-### ✔ Panel de clases a cubrir
-- Pantalla de visualización automática para el profesorado (TV/monitor del centro).
-- Cálculo dinámico de las clases que quedan sin docente en cada franja horaria.
-- Integración con el horario del centro (“timetable”) a través de la base de datos.
-- Agrupación automática de optativas/desdobles para evitar duplicidades.
-
-### ✔ Gestión de sustituciones
-- Detección de sustituciones **automática** comparando `email_form` y `email` del titular.
-- Tabla de sustituciones activas, indicando:
-  - Titular
-  - Nombre mostrado en el panel
-  - Email del sustituto
-- Formulario para **añadir sustitutos**, indicando:
-  - Titular
-  - Nombre a mostrar
-  - Email del sustituto (correo desde el que enviará las ausencias)
-- Botón para **quitar sustituto**, restaurando nombre y correo del titular.
-
-### ✔ Seguridad y privacidad
-- Motivos de ausencia y observaciones **no se muestran** en los paneles públicos.
-- RLS activado en Supabase para evitar acceso no autorizado.
-- Acceso al panel de gestión mediante autenticación con Supabase Auth.
-- El panel público solo muestra información estrictamente necesaria.
-
----
-
-## 🧱 Arquitectura del sistema
-
-### 🔧 Supabase (Base de datos + API)
-Tablas principales:
-- `teachers` — datos del profesorado (titular, display_name, email, email_form).
-- `absences` — ausencias registradas (día, docente, franja horaria).
-- `timetable` — horario oficial del centro.
-- Vista `classes_to_cover` — calcula las clases a cubrir en base a ausencias y horario.
-
-### 📤 Google Form → Apps Script → Supabase
-Un Google Form permite al profesorado comunicar ausencias rápidamente.
-
-Apps Script:
-- Recibe el envío.
-- Identifica al docente desde el correo.
-- Envía la ausencia a Supabase mediante `UrlFetchApp.fetch()` con clave segura.
-- Envía aviso a todo el Equipo Directivo o Jefatura según si la ausencia es sobrevenida (mismo día) o planificada (futura).
-
-### 🖥 Panel de gestión (HTML + JS + Supabase client)
-Incluye:
-- Inicio de sesión con Supabase Auth.
-- Formulario para nuevas ausencias.
-- Selector de fecha y listado editable.
-- Gestión de sustituciones.
-- Diseño responsive sin frameworks externos.
+Proyecto web para la gestión de ausencias del profesorado, generación automática de clases a cubrir y administración de sustituciones. 
+Integra Google Forms + Apps Script y Supabase. Los horarios del profesorado se importan desde **HORW** (software de gestión de horarios) directamente en Supabase. 
 
 
 ---
 
-## 🚀 Puesta en marcha
+## Estado actual (resumen rápido)
 
-### 1. Clonar el repositorio
-```bash
-git clone https://github.com/xxxx/gestion-ausencias.git
-cd gestion-ausencias
-```
+- Interfaz migrada a Vue 3 (single-file-lite en `index.html` + `script.js`).
+- Tramos horarios: 14 tramos (4 y 11 son recreos). Tramos definidos en la UI con selects.
+- Integración activa con Supabase; las consultas al horario (`timetable`) se filtran por profesor para mejorar rendimiento.
+- La vista de horario unifica registros del mismo aula y materia concatenando grupos (evita duplicados por desdobles/optativas).
+- El panel de clases a cubrir agrupa por tramo y usa rowspan para no repetir la columna del tramo.
+- Impresión optimizada: media query `@media print` para imprimir la tabla en horizontal.
+- Ayuda actualizada in-app (`#help-section`) con instrucciones sobre Google Classroom, tramos por defecto y vínculo con la TV de Sala del Profesorado.
+- La versión actual no contempla la carga de nuevos archivos CSV directamente desde la web, pero está en la hoja de ruta.
 
-## 🔀 Ramas de trabajo
+---
 
-- `dev`: rama base con la versión clásica en JavaScript vanilla.
-- `vue`: rama creada a partir de `dev` para la migración completa a Vue 3 y la nueva navegación por pestañas.
+## Funcionalidades principales
 
-Cada nueva iteración de la interfaz debe salir de `dev` (por ejemplo, `git checkout dev && git checkout -b vue-v2`) para mantener la rama base libre de cambios experimentales.
+### Registro de ausencias
+- Formulario para registrar ausencias individuales o en rango (genera una ausencia por día).
+- Selección de tramos (selects con valores 1..14).
+- Por defecto las ausencias se crean como día completo (tramos 1–14). Si el profesor se reincorpora, editar los tramos para que deje de aparecer en el panel.
+- Las ausencias también se guardan automáticamente cuando el profesorado rellena el Google Form (Apps Script envía a Supabase).
+
+### Panel de clases a cubrir
+- Agrupa las clases por tramo horario; filas del mismo tramo se unifican visualmente.
+- Calcula qué clases quedan sin docente y muestra la información pública necesaria (sin motivos/observaciones).
+- Lo que ves en el panel es exactamente lo que se visualiza en la TV de la Sala del Profesorado (tras actualizar el panel).
+
+### Horario del profesorado
+- Selecciona un docente para cargar su horario semanal.
+- Las entradas del mismo día/tramo que comparten aula y materia se unifican concatenando grupos.
+
+### Gestión de sustituciones
+- Listado y alta/baja de sustitutos.
+- Detección automática comparando `email_form` y `email` del titular.
+
+### Seguridad y privacidad
+- Motivos/observaciones no se muestran en paneles públicos.
+- RLS en Supabase y autenticación con Supabase Auth para la gestión.
+
+---
+
+## Capturas
+
+
+<div style="text-align:center;">
+<h2>Capturas de pantalla</h2>
+
+<img src="assets/screenshots/Captura1.png" alt="Captura 1 — panel principal de gestión de ausencias" style="max-width:800px;width:70vw;margin:0.5rem 0;border:1px solid #111;">
+<br>
+<img src="assets/screenshots/Captura2.png" alt="Captura 2 — lista de clases a cubrir" style="max-width:800px;width:70vw;margin:0.5rem 0;border:1px solid #111;">
+<img src="assets/screenshots/Captura3.png" alt="Captura 3 — vista de horario del profesorado" style="max-width:800px;width:70vw;margin:0.5rem 0;border:1px solid #111;">
+<img src="assets/screenshots/Captura4.png" alt="Captura 4 — formulario de registro de ausencias" style="max-width:800px;width:70vw;margin:0.5rem 0;border:1px solid #111;">
+<img src="assets/screenshots/Captura5.png" alt="Captura 5 — configuración y ayuda integrada" style="max-width:800px;width:70vw;margin:0.5rem 0;border:1px solid #111;">
+</div>
+
+
+---
+
+## Desarrollo y puesta en marcha local
+
+1. Clonar y abrir el proyecto:
+   ```
+   git clone <repo>
+   cd gestion-ausencias
+   ```
+
+2. Servidor estático simple (Linux):
+   ```
+   python3 -m http.server 8000
+   # abrir http://localhost:8000/index.html
+   ```
+
+3. Archivo con credenciales Supabase: revisar `script.js` (URL y clave anónima). Para producción usa variables de entorno y RLS.
+
+---
+
