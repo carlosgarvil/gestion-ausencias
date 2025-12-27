@@ -370,7 +370,8 @@
                 <input type="email" v-model="substitutionForm.newTeacherEmail" required />
               </label>
 
-              <button type="submit" class="btn-save" :disabled="substitutionSaving">Copiar horario al nuevo profesor</button>
+              <button type="submit" class="btn-save" :disabled="substitutionSaving">Copiar horario al nuevo
+                profesor</button>
               <div v-if="substitutionMessage" class="message" :class="substitutionMessageType">
                 {{ substitutionMessage }}
               </div>
@@ -403,7 +404,8 @@
               Classroom; por tanto pueden aparecer registradas sin intervención manual en esta aplicación.</li>
             <li>Por defecto, las ausencias creadas se marcan como ausencia de día completo (tramos
               <strong>1–14</strong>). Si el profesor se reincorpora durante la jornada, edita los tramos de esa ausencia
-              para eliminar los tramos ya cubiertos y evitar que siga apareciendo en el panel.</li>
+              para eliminar los tramos ya cubiertos y evitar que siga apareciendo en el panel.
+            </li>
             <li>El panel muestra exactamente la información que se visualiza en la TV de la Sala del Profesorado:
               cualquier cambio en los tramos en este sistema se reflejará en dicha TV tras actualizar el panel.</li>
           </ul>
@@ -424,11 +426,12 @@
         <article class="help-block">
           <h3>Gestión de sustituciones</h3>
           <ul>
-            <li>El panel de clases a cubrir identifica automáticamente una sustitución cuando el correo del formulario
-              difiere del titular.</li>
-            <li>Desde la pestaña “Sustituciones” puedes asignar el nombre y correo del sustituto para que el panel
-              muestre los datos correctos.</li>
-            <li>Cuando el titular se reincorpore, usa “Quitar sustituto” para volver a mostrar su nombre y correo.</li>
+            <li>Desde la pestaña “Sustituciones” puedes crear un nuevo profesor copiando el horario completo de un
+              titular.</li>
+            <li>El nuevo docente necesita un nombre (Apellidos, Nombre) y un correo @iespoligonosur.org.</li>
+            <li>Al realizar la copia, se duplican todas las entradas del horario del titular para el nuevo docente.</li>
+            <li>El nuevo profesor aparecerá automáticamente en los selectores de la aplicación para registrar sus
+              propias ausencias.</li>
           </ul>
         </article>
 

@@ -787,9 +787,11 @@ createApp({
     },
     buildTimetableUpdatePayload(entry) {
       const payload = {};
-      const subjectValue = entry.subject?.trim() || null;
-      const groupValue = entry.group?.trim() || null;
-      const classroomValue = entry.classroom?.trim() || null;
+      // Según el esquema, subject y group_name son NOT NULL.
+      // Usamos cadena vacía en lugar de null para evitar errores de restricción.
+      const subjectValue = entry.subject?.trim() || "";
+      const groupValue = entry.group?.trim() || "";
+      const classroomValue = entry.classroom?.trim() || null; // classroom es nullable
       const visibleValue = entry.visible !== false;
 
       const source = entry.original || {};
@@ -868,7 +870,7 @@ createApp({
         // Obtén todos los nombres para comparar
         const { data: allData } = await client.from("timetable").select("teacher_name");
         console.log("Nombres disponibles en BD:", allData?.map(d => d.teacher_name) || []);
-        
+
         this.teacherScheduleMessage = "No hay clases registradas para este docente.";
         this.teacherScheduleGrid = this.buildEmptyTeacherScheduleGrid();
         this.loadingTeacherSchedule = false;
@@ -919,17 +921,30 @@ createApp({
 
       try {
         for (const entry of classInfo.editEntries) {
-          if (!entry.id) {
+          // El esquema confirma que la columna es 'id'
+          const idValue = entry.id || this.getTimetableEntryId(entry.original || {});
+
+          if (idValue === null || idValue === undefined) {
             throw new Error("Hay clases sin identificador, no se pueden guardar.");
           }
 
           const payload = this.buildTimetableUpdatePayload(entry);
+
+          // Limpieza de campos que no deben ir en el update (especialmente el ID)
+          const cleanPayload = { ...payload };
+          delete cleanPayload.id;
+          delete cleanPayload.timetable_id;
+          delete cleanPayload.uuid;
+
+          console.log("Actualizando entrada ID:", idValue, "con payload:", cleanPayload);
+
           const { error } = await client
             .from("timetable")
-            .update(payload)
-            .eq("id", entry.id);
+            .update(cleanPayload)
+            .eq("id", idValue);
 
           if (error) {
+            console.error("Error de Supabase al actualizar:", error);
             throw error;
           }
         }
