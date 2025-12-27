@@ -32,13 +32,19 @@ Integra Google Forms + Apps Script y Supabase. Los horarios del profesorado se i
 - Calcula qué clases quedan sin docente y muestra la información pública necesaria (sin motivos/observaciones).
 - Lo que ves en el panel es exactamente lo que se visualiza en la TV de la Sala del Profesorado (tras actualizar el panel).
 
-### Horario del profesorado
-- Selecciona un docente para cargar su horario semanal.
-- Las entradas del mismo día/tramo que comparten aula y materia se unifican concatenando grupos.
+### ✔ Consulta y edición de horarios
+- Selector de profesor/a para visualizar su horario semanal completo.
+- **Edición inline**: Permite modificar la materia, grupo o aula de cualquier clase directamente desde la cuadrícula del horario.
+- Opción de ocultar clases específicas para que no aparezcan en el panel público.
+- Vista organizada por tramos horarios y días de la semana.
 
-### Gestión de sustituciones
-- Listado y alta/baja de sustitutos.
-- Detección automática comparando `email_form` y `email` del titular.
+### ✔ Gestión de sustituciones
+- Permite crear un nuevo profesor copiando el horario completo de un docente titular.
+- Proceso simplificado:
+  - Seleccionar el profesor titular.
+  - Indicar el nombre del nuevo profesor (Apellidos, Nombre).
+  - Indicar el correo @iespoligonosur.org del sustituto.
+- El sistema duplica automáticamente todas las entradas de la tabla `timetable` para el nuevo docente.
 
 ### Seguridad y privacidad
 - Motivos/observaciones no se muestran en paneles públicos.
@@ -80,4 +86,5 @@ Integra Google Forms + Apps Script y Supabase. Los horarios del profesorado se i
 3. Archivo con credenciales Supabase: revisar `script.js` (URL y clave anónima). Para producción usa variables de entorno y RLS.
 
 ---
+
 
