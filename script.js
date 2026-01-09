@@ -34,7 +34,7 @@ const MENU_ITEMS = [
   { value: "panel", label: "Panel" },
   { value: "justificaciones", label: "Justificantes" },
   { value: "profesorado", label: "Profesorado" },
-  { value: "sustituciones", label: "Sustituciones" },
+  { value: "sustituciones", label: "Gestión del profesorado" },
   { value: "ayuda", label: "Ayuda" }
 ];
 
@@ -107,6 +107,10 @@ createApp({
       substitutionMessage: "",
       substitutionMessageType: "",
       substitutionSaving: false,
+      deleteTeacherName: "",
+      deleteTeacherMessage: "",
+      deleteTeacherMessageType: "",
+      deleteTeacherSaving: false,
       teacherScheduleTeacher: "",
       teacherScheduleEntries: [],
       teacherScheduleGrid: SLOT_OPTIONS.map((slot) => ({
@@ -219,6 +223,10 @@ createApp({
       this.substitutionMessage = "";
       this.substitutionMessageType = "";
       this.substitutionSaving = false;
+      this.deleteTeacherName = "";
+      this.deleteTeacherMessage = "";
+      this.deleteTeacherMessageType = "";
+      this.deleteTeacherSaving = false;
     },
     handleAuthenticated(user) {
       this.isLoggedIn = true;
@@ -1170,6 +1178,135 @@ createApp({
         this.substitutionMessageType = "error";
       } finally {
         this.substitutionSaving = false;
+      }
+    },
+    async handleTeacherDelete() {
+      const teacherName = this.deleteTeacherName?.trim();
+      this.deleteTeacherMessage = "";
+      this.deleteTeacherMessageType = "";
+
+      if (!teacherName) {
+        this.deleteTeacherMessage = "Selecciona un profesor para eliminar.";
+        this.deleteTeacherMessageType = "error";
+        return;
+      }
+
+      if (!confirm(`Eliminar definitivamente a ${teacherName} y todo su horario?`)) {
+        return;
+      }
+
+      this.deleteTeacherSaving = true;
+
+      try {
+        const { data: deletedTimetableRows, error: timetableError } = await client
+          .from("timetable")
+          .delete()
+          .eq("teacher_name", teacherName)
+          .select("id");
+
+        if (timetableError) {
+          throw new Error(`No se pudo eliminar el horario: ${timetableError.message}`);
+        }
+
+        let timetableDeletedCount = deletedTimetableRows?.length || 0;
+        if (!timetableDeletedCount) {
+          const { data: fallbackTimetableRows, error: fallbackTimetableError } = await client
+            .from("timetable")
+            .delete()
+            .ilike("teacher_name", teacherName)
+            .select("id");
+
+          if (fallbackTimetableError) {
+            throw new Error(
+              `No se pudo eliminar el horario (búsqueda alternativa): ${fallbackTimetableError.message}`
+            );
+          }
+
+          timetableDeletedCount = fallbackTimetableRows?.length || 0;
+        }
+
+        let teacherRecord = null;
+        const { data: teacherByName, error: teacherByNameError } = await client
+          .from("teachers")
+          .select("id, name, display_name")
+          .eq("name", teacherName)
+          .limit(1);
+
+        if (teacherByNameError) {
+          throw new Error(`No se pudo localizar el profesor: ${teacherByNameError.message}`);
+        }
+
+        if (teacherByName && teacherByName.length) {
+          teacherRecord = teacherByName[0];
+        } else {
+          const { data: teacherByDisplay, error: teacherByDisplayError } = await client
+            .from("teachers")
+            .select("id, name, display_name")
+            .eq("display_name", teacherName)
+            .limit(1);
+
+          if (teacherByDisplayError) {
+            throw new Error(
+              `No se pudo localizar el profesor por nombre visible: ${teacherByDisplayError.message}`
+            );
+          }
+
+          if (teacherByDisplay && teacherByDisplay.length) {
+            teacherRecord = teacherByDisplay[0];
+          }
+        }
+
+        if (!teacherRecord) {
+          this.deleteTeacherMessage =
+            "No se encontró el profesor en la tabla teachers. Revisa el nombre.";
+          this.deleteTeacherMessageType = "error";
+          return;
+        }
+
+        const teacherDeleteQuery = client.from("teachers").delete();
+        if (teacherRecord.id !== undefined && teacherRecord.id !== null) {
+          teacherDeleteQuery.eq("id", teacherRecord.id);
+        } else if (teacherRecord.name) {
+          teacherDeleteQuery.eq("name", teacherRecord.name);
+        } else {
+          teacherDeleteQuery.eq("display_name", teacherRecord.display_name);
+        }
+
+        const { data: deletedTeacherRows, error: teacherError } = await teacherDeleteQuery.select("id");
+
+        if (teacherError) {
+          throw new Error(`No se pudo eliminar el profesor: ${teacherError.message}`);
+        }
+
+        const teacherDeletedCount = deletedTeacherRows?.length || 0;
+        if (teacherDeletedCount) {
+          this.deleteTeacherMessage = timetableDeletedCount
+            ? "Profesor eliminado y horario borrado."
+            : "Profesor eliminado. No se encontraron clases para borrar.";
+          this.deleteTeacherMessageType = "ok";
+        } else {
+          this.deleteTeacherMessage =
+            "No se pudo eliminar el profesor. Revisa los permisos de la base de datos.";
+          this.deleteTeacherMessageType = "error";
+        }
+        this.deleteTeacherName = "";
+
+        if (this.teacherScheduleTeacher === teacherName) {
+          this.teacherScheduleTeacher = "";
+        }
+
+        if (this.substitutionForm.teacher === teacherName) {
+          this.substitutionForm.teacher = "";
+        }
+
+        await this.populateTeachers();
+      } catch (error) {
+        console.error("Error eliminando profesor:", error);
+        this.deleteTeacherMessage =
+          error?.message || "No se pudo eliminar el profesor.";
+        this.deleteTeacherMessageType = "error";
+      } finally {
+        this.deleteTeacherSaving = false;
       }
     }
   }

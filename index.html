@@ -6,6 +6,13 @@
   <title>Gestión de ausencias - IES Polígono Sur</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="style.css" />
+  <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png" />
+  <link rel="shortcut icon" href="img/favicon.ico" />
+  <meta name="msapplication-TileColor" content="#2b5797" />
+  <meta name="msapplication-TileImage" content="img/android-chrome-192x192.png" />
+  <meta name="theme-color" content="#ffffff" />
 </head>
 
 <body>
@@ -341,12 +348,10 @@
       </section>
 
       <section id="substitutions-section" v-show="activeMenu === 'sustituciones'">
-        <h2>🔁 Copiar horario a un nuevo docente</h2>
+        <h2>Gestión del profesorado</h2>
         <p>
-          Crea un nuevo profesor copiando el horario completo de un titular. El nuevo docente solo necesita
-          <strong>nombre</strong> (Apellidos, Nombre) y un <strong>correo @iespoligonosur.org</strong>.
-          Se insertará en la tabla <code>teachers</code> y se duplicarán todas las entradas de la tabla
-          <code>timetable</code> cuyo <code>teacher_name</code> coincida con el titular seleccionado.
+          Desde aquí puedes crear nuevas incorporaciones copiando un horario existente o eliminar profesorado y sus
+          horarios asociados en la base de datos.
         </p>
 
         <div class="substitutions-layout">
@@ -381,14 +386,28 @@
           </div>
 
           <div class="substitutions-block">
-            <h3>Cómo funciona</h3>
-            <ul>
-              <li>Se crea un nuevo registro en <code>teachers</code> con el nombre y correo indicados.</li>
-              <li>Se copian todas las filas de <code>timetable</code> cuyo <code>teacher_name</code> coincide con el
-                titular seleccionado.</li>
-              <li>El nuevo docente aparecerá en los selectores de la aplicación tras guardar la operación.</li>
-            </ul>
+            <h3>Eliminar profesorado</h3>
+            <form id="delete-teacher-form" @submit.prevent="handleTeacherDelete">
+              <label>
+                Profesor/a a eliminar
+                <select v-model="deleteTeacherName" required>
+                  <option value="">Selecciona…</option>
+                  <option v-for="teacher in teachers" :key="`delete-${teacher.name}`" :value="teacher.name">
+                    {{ teacher.name }}
+                  </option>
+                </select>
+              </label>
+
+              <button type="submit" class="btn-delete" :disabled="deleteTeacherSaving">
+                Eliminar profesor/a
+              </button>
+              <div v-if="deleteTeacherMessage" class="message" :class="deleteTeacherMessageType">
+                {{ deleteTeacherMessage }}
+              </div>
+            </form>
           </div>
+
+          
         </div>
       </section>
 
