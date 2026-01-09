@@ -406,7 +406,7 @@ createApp({
 
       const { data, error } = await client
         .from("absences")
-        .select("id, teacher_name, date, start_slot, end_slot, status")
+        .select("id, teacher_name, date, start_slot, end_slot, status, reason")
         .gte("date", range.startDate)
         .lt("date", range.exclusiveEndDate)
         .order("date", { ascending: true })
@@ -974,6 +974,14 @@ createApp({
         day: "2-digit",
         month: "2-digit"
       });
+    },
+    truncateReason(reason, maxLength = 50) {
+      if (!reason) return "";
+      const trimmed = reason.trim();
+      if (trimmed.length <= maxLength) {
+        return trimmed;
+      }
+      return `${trimmed.slice(0, maxLength - 3)}...`;
     },
     toggleAbsenceEdit(absence) {
       absence.editing = !absence.editing;
