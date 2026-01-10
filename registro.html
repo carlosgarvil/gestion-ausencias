@@ -1,0 +1,118 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>â° Sistema de Control de Fichaje - IES PolÃ­gono Sur</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles-registro.css">
+    
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1><span>â°</span> Sistema de Control de Presencia</h1>
+            <p class="subtitle">IES PolÃ­gono Sur - Registro de Asistencia del Profesorado</p>
+        </header>
+
+        <div class="controls">
+            <div class="file-upload">
+                <label for="csvFile">
+                    ðŸ“ Cargar Archivo CSV
+                </label>
+                <button type="button" id="helpBtn" class="help-btn" aria-haspopup="dialog" aria-controls="helpModal" title="Ayuda: cÃ³mo exportar el CSV desde SÃ©neca">â”</button>
+                <input type="file" id="csvFile" accept=".csv">
+                <span class="file-name" id="fileName">NingÃºn archivo seleccionado</span>
+            </div>
+
+            <div class="filters">
+                <div class="filter-group">
+                    <label for="searchTeacher">Buscar Profesor/a</label>
+                    <input type="text" id="searchTeacher" placeholder="Nombre del profesor/a...">
+                </div>
+                <div class="filter-group">
+                    <label for="filterStatus">Filtrar por Estado</label>
+                    <select id="filterStatus">
+                        <option value="all">Todos</option>
+                        <option value="complete">Completo (âœ“)</option>
+                        <option value="partial">Parcial (âš )</option>
+                        <option value="missing">Falta (âœ—)</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="sortBy">Ordenar por</label>
+                    <select id="sortBy">
+                        <option value="name">Nombre</option>
+                        <option value="score">PuntuaciÃ³n de Uso</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="dateFrom">Desde</label>
+                    <input type="date" id="dateFrom">
+                </div>
+                <div class="filter-group">
+                    <label for="dateTo">Hasta</label>
+                    <input type="date" id="dateTo">
+                </div>
+            </div>
+        </div>
+
+        <div class="stats" id="stats" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-label">Total Profesores</div>
+                <div class="stat-value" id="totalTeachers">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">DÃ­as Registrados</div>
+                <div class="stat-value" id="totalDays">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Fichajes Completos</div>
+                <div class="stat-value" id="completeCount">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Fichajes Incompletos</div>
+                <div class="stat-value" id="incompleteCount">0</div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div class="table-wrapper" id="tableWrapper">
+                <div class="empty-state">
+                    <div class="empty-state-icon">ðŸ“Š</div>
+                    <h2>No hay datos cargados</h2>
+                    <p>Por favor, carga el archivo CSV para ver el registro de fichajes</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script-registro.js" defer></script>
+    <!-- Help modal -->
+    <div id="helpModal" class="modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="helpTitle">
+        <div class="modal-overlay" id="helpOverlay" data-close></div>
+        <div class="modal-content" role="document">
+            <button class="modal-close" id="helpClose" aria-label="Cerrar ayuda">Ã—</button>
+            <h2 id="helpTitle">CÃ³mo exportar el archivo CSV desde SÃ©neca</h2>
+            <p>Para que la carga funcione correctamente, exporta el fichero en formato <strong>CSV</strong>. Sigue estos pasos en SÃ©neca:</p>
+            <ol>
+                <li>Accede a <strong>Personal</strong>.</li>
+                <li>En el menÃº lateral, entra en <strong>Control de presencia</strong>.</li>
+                <li>Selecciona <strong>Registro de fichajes</strong>.</li>
+                <li>Usa la opciÃ³n de <strong>Exportar</strong> y elige <strong>CSV</strong> como formato de exportaciÃ³n.</li>
+            </ol>
+            <p>Consejos:</p>
+            <ul>
+                <li>AsegÃºrate de que el archivo estÃ© en <strong>CSV</strong> (es muy importante, no XLS/XLSX).</li>
+                <li>El archivo generado contiene todas columnas disponibles.</li>
+                <div class="modal-img">
+                    <img src="datos_a_exportar.png">
+                </div>
+            </ul>
+        </div>
+    </div>
+</body>
+
+</html>
