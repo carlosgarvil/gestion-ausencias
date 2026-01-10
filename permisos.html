@@ -46,6 +46,38 @@
     .small { font-size: 12px; color: #444; }
     details summary { cursor: pointer; font-weight: 700; }
     .footer-note { color: #444; font-size: 12px; margin-top: 10px; }
+    .footer-note-inline { display: inline-block; margin-top: 0; margin-left: 8px; vertical-align: middle; }
+    .info-icon { position: relative; display: inline-block; cursor: help; color: #2b6cb0; font-weight: 700; }
+    .info-icon:focus { outline: none; }
+    .info-icon .tooltip {
+      display: none;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 125%;
+      background: #222;
+      color: #fff;
+      padding: 6px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      white-space: nowrap;
+      z-index: 20;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    }
+    .info-icon .tooltip::after {
+      content: "";
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border-width: 6px;
+      border-style: solid;
+      border-color: #222 transparent transparent transparent;
+    }
+    .info-icon:hover .tooltip,
+    .info-icon:focus .tooltip {
+      display: block;
+    }
     .error { color: #b00020; font-weight: 700; }
   </style>
 </head>
@@ -92,14 +124,18 @@
 
       <section id="permisos-section">
         <h2>Gestión de permisos retribuidos.</h2>
-        <p class="muted">En la ruta de Séneca "Personal > Ausencias > Solicitud de Permisos y Licencias (Anexo I)", exporta en formato CSV todas las solicitudes con todas las columnas. El programa filtrará el permiso P27 y calculará los próximos permisos que deben ser aceptados o rechazados según la normativa. El cálculo se hace local en tu navegador y evitamos problemas de filtración de datos.</p>
+        <p class="muted">En la ruta de Séneca "Personal > Ausencias > Solicitud de Permisos y Licencias (Anexo I)", exporta en formato CSV todas las solicitudes con todas las columnas. El programa filtrará el permiso P27 y calculará los próximos permisos que deben ser aceptados o rechazados según la normativa. El cálculo se hace local en tu navegador, evitando problemas de privacidad de datos.</p>
 
         <div class="panel">
           <div class="row">
             <div class="field">
-              <label>CSV (exportación Séneca)</label>
+              <label>CSV (exportación Séneca)<span class="footer-note footer-note-inline">
+                <span class="info-icon" tabindex="0" role="img" aria-label="Orden circular">
+                  &#8505;
+                  <span class="tooltip">Columnas esperadas: Nombre, Motivo, Fecha inicio, Fecha fin, Estado.</span>
+                </span>
+              </span></label>
               <input id="csvFile" class="w-file" type="file" accept=".csv,text/csv" />
-              <div class="footer-note">Columnas esperadas: Nombre, Motivo, Fecha inicio, Fecha fin, Estado.</div>
             </div>
 
             <div class="field">
@@ -118,15 +154,20 @@
             </div>
 
             <div class="field">
-              <label>Letra desempate</label>
+              <label>Letra desempate<span class="footer-note footer-note-inline">
+                <span class="info-icon" tabindex="0" role="img" aria-label="Orden circular">
+                  &#8505;
+                  <span class="tooltip">Orden circular: H→I→...→Z→A→...</span>
+                </span>
+              </span></label>
               <input id="letra" class="w-letter" type="text" maxlength="1" />
-              <div class="footer-note">Orden circular: H->I->...->Z->A->...</div>
+              
             </div>
 
             <div class="actions">
               <button id="runBtn">Calcular</button>
               <button id="exportBtn" disabled>Exportar resultado CSV</button>
-              <span id="status" class="pill">Sin calcular</span>
+              <span id="status" class="pill">Estado: Sin calcular</span>
             </div>
           </div>
 
@@ -672,7 +713,7 @@
       }));
 
       els.exportBtn.disabled = false;
-      setStatus("Calculado", "ok");
+      setStatus("Estado: Calculado", "ok");
     });
 
     return true;
