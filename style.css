@@ -47,16 +47,36 @@ button {
 }
 
 .nav-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.85rem;
+  border-radius: 6px;
   background: #e3e8ef;
   color: #1f2a37;
   border: 1px solid transparent;
   margin-top: 0;
+  text-decoration: none;
+  font-weight: 600;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.nav-link:active {
+  transform: scale(0.97);
 }
 
 .nav-link.active {
   background: #1e88e5;
   color: #fff;
   border-color: #166fbe;
+}
+
+.nav-link:hover {
+  background: #cfd7e3;
+}
+
+.nav-link.active:hover {
+  background: #166fbe;
 }
 
 /* Layout principal dentro de #app-section */

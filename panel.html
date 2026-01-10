@@ -1,0 +1,108 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Gestión de ausencias - IES Polígono Sur</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png" />
+  <link rel="shortcut icon" href="img/favicon.ico" />
+  <meta name="msapplication-TileColor" content="#2b5797" />
+  <meta name="msapplication-TileImage" content="img/android-chrome-192x192.png" />
+  <meta name="theme-color" content="#ffffff" />
+</head>
+
+<body>
+  <div id="app">
+    <h1>Gestión de ausencias del profesorado</h1>
+
+    <section id="login-section" v-if="!isLoggedIn">
+      <h2>Acceso</h2>
+      <form @submit.prevent="handleLogin">
+        <label>
+          Correo
+          <input type="email" v-model="loginForm.email" required />
+        </label>
+        <label>
+          Contraseña
+          <input type="password" v-model="loginForm.password" required />
+        </label>
+        <button type="submit">Entrar</button>
+        <div v-if="loginMessage" class="message" :class="loginMessageType">{{ loginMessage }}</div>
+      </form>
+    </section>
+
+    <section id="app-section" v-else>
+      <header class="app-header">
+        <div class="header-left">
+          <span class="session-text">
+            Sesión iniciada como <strong>{{ userEmail }}</strong>
+          </span>
+        </div>
+        <button id="btn-logout" type="button" class="btn-logout" @click="handleLogout">Cerrar sesión</button>
+      </header>
+
+      <nav class="top-nav">
+        <a class="nav-link" href="index.html">Ausencias</a>
+        <a class="nav-link active" href="panel.html">Panel</a>
+        <a class="nav-link" href="justificaciones.html">Justificantes</a>
+        <a class="nav-link" href="profesorado.html">Profesorado</a>
+        <a class="nav-link" href="gestion_profesorado.html">Gestión del profesorado</a>
+        <a class="nav-link" href="permisos.html">Permisos</a>
+        <a class="nav-link" href="ayuda.html">Ayuda</a>
+      </nav>
+
+      <section id="panel-section">
+        <div class="panel-header">
+          <h2>Panel del centro <button id="btn-print" onclick="window.print()">
+               Imprimir / PDF
+            </button></h2>
+          <div class="panel-controls">
+            <label>
+              Fecha
+              <input type="date" v-model="panelDate" />
+            </label>
+            <button type="button" class="btn-refresh" @click="loadPanelData">Actualizar</button>
+          </div>
+        </div>
+
+        <div class="panel-table-wrapper">
+          <p v-if="loadingPanel">Cargando clases…</p>
+          <p v-else-if="panelMessage">{{ panelMessage }}</p>
+          <table v-else class="panel-table">
+            <thead>
+              <tr>
+                <th>Franja horaria</th>
+                <th>Grupo</th>
+                <th>Materia</th>
+                <th>Aula</th>
+                <th>Profesor/a ausente</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="(row, index) in panelRows" :key="row.key || `${row.teacher}-${index}-${row.slotValue}`">
+                <td v-if="row.showSlotLabel" :rowspan="row.slotRowSpan">{{ row.slotLabel }}</td>
+                <td>{{ row.group }}</td>
+                <td>{{ row.subject }}</td>
+                <td>{{ row.classroom }}</td>
+                <td>{{ row.teacher }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="script.js"></script>
+</body>
+
+</html>
+
+
+

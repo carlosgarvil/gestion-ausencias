@@ -1,24 +1,24 @@
-const { createApp } = Vue;
+﻿const { createApp } = Vue;
 const { createClient } = supabase;
 
 const SUPABASE_URL = "https://kbluhvorfldptbcnwvvx.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtibHVodm9yZmxkcHRiY253dnZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNDIxNjIsImV4cCI6MjA3ODYxODE2Mn0.WUeTibJHnmVCsNqcwvzsUdFpsTn8BzjM-W7eZCRaZ7I";
 
 const SLOT_OPTIONS = [
-  { value: 1, label: "08:15–09:15" },
-  { value: 2, label: "09:15–10:15" },
-  { value: 3, label: "10:15–11:15" },
-  { value: 4, label: "11:15–11:45 (recreo)" },
-  { value: 5, label: "11:45–12:45" },
-  { value: 6, label: "12:45–13:45" },
-  { value: 7, label: "13:45–14:45" },
-  { value: 8, label: "15:00–16:00" },
-  { value: 9, label: "16:00–17:00" },
-  { value: 10, label: "17:00–18:00" },
-  { value: 11, label: "18:00–18:15 (recreo)" },
-  { value: 12, label: "18:15–19:15" },
-  { value: 13, label: "19:15–20:15" },
-  { value: 14, label: "20:15–21:15" }
+  { value: 1, label: "08:15-09:15" },
+  { value: 2, label: "09:15-10:15" },
+  { value: 3, label: "10:15-11:15" },
+  { value: 4, label: "11:15-11:45 (recreo)" },
+  { value: 5, label: "11:45-12:45" },
+  { value: 6, label: "12:45-13:45" },
+  { value: 7, label: "13:45-14:45" },
+  { value: 8, label: "15:00-16:00" },
+  { value: 9, label: "16:00-17:00" },
+  { value: 10, label: "17:00-18:00" },
+  { value: 11, label: "18:00-18:15 (recreo)" },
+  { value: 12, label: "18:15-19:15" },
+  { value: 13, label: "19:15-20:15" },
+  { value: 14, label: "20:15-21:15" }
 ];
 
 const WEEK_DAYS = [
@@ -297,7 +297,7 @@ createApp({
 
       const dates = this.getDateRange(dateFrom, dateTo);
       if (!dates) {
-        this.absenceMessage = "La fecha hasta no puede ser anterior a la fecha desde.";
+        this.absenceMessage = "La fecha 'hasta' no puede ser anterior a la fecha 'desde'.";
         this.absenceMessageType = "error";
         return;
       }
@@ -342,7 +342,7 @@ createApp({
         .order("start_slot", { ascending: true });
 
       if (error) {
-        console.error("Error cargando ausencias del día:", error);
+        console.error("Error cargando ausencias del dí­a:", error);
         this.absences = [];
         this.loadingAbsences = false;
         return;
@@ -440,7 +440,7 @@ createApp({
       if (start === end) {
         return `Tramo ${start}`;
       }
-      return `Tramos ${start}–${end}`;
+      return `Tramos ${start}-${end}`;
     },
     getSlotLabel(slotValue) {
       const slotNumber = Number(slotValue);
@@ -609,11 +609,11 @@ createApp({
           return null;
         }
 
-        // Mapeo de letras a números
+        // Mapeo de letras a nÃºmeros
         const letterMapping = {
           l: 1,  // Lunes
           m: 2,  // Martes
-          x: 3,  // miércoles
+          x: 3,  // miÃ©rcoles
           j: 4,  // Jueves
           v: 5   // Viernes
         };
@@ -632,14 +632,12 @@ createApp({
           monday: 1,
           martes: 2,
           tuesday: 2,
-          miércoles: 3,
           miercoles: 3,
           wednesday: 3,
           jueves: 4,
           thursday: 4,
           viernes: 5,
           friday: 5,
-          sábado: 6,
           sabado: 6,
           saturday: 6
         };
@@ -795,8 +793,8 @@ createApp({
     },
     buildTimetableUpdatePayload(entry) {
       const payload = {};
-      // Según el esquema, subject y group_name son NOT NULL.
-      // Usamos cadena vacía en lugar de null para evitar errores de restricción.
+      // SegÃºn el esquema, subject y group_name son NOT NULL.
+      // Usamos cadena vacÃ­a en lugar de null para evitar errores de restricciÃ³n.
       const subjectValue = entry.subject?.trim() || "";
       const groupValue = entry.group?.trim() || "";
       const classroomValue = entry.classroom?.trim() || null; // classroom es nullable
@@ -875,7 +873,7 @@ createApp({
       }
 
       if (!data || data.length === 0) {
-        // Obtén todos los nombres para comparar
+        // ObtÃ©n todos los nombres para comparar
         const { data: allData } = await client.from("timetable").select("teacher_name");
         console.log("Nombres disponibles en BD:", allData?.map(d => d.teacher_name) || []);
 
@@ -924,7 +922,7 @@ createApp({
       }
 
       classInfo.saving = true;
-      classInfo.editMessage = "Guardando cambios…";
+      classInfo.editMessage = "Guardando cambios...";
       classInfo.editMessageType = "info";
 
       try {
@@ -1011,7 +1009,7 @@ createApp({
         return;
       }
 
-      absence.editMessage = "Guardando cambios…";
+      absence.editMessage = "Guardando cambios...";
       absence.editMessageType = "info";
 
       const { error } = await client
@@ -1038,7 +1036,7 @@ createApp({
     async updateJustificationStatus(absence, newStatus) {
       const previousStatus = absence.status;
       absence.status = newStatus;
-      absence.statusMessage = "Guardando…";
+      absence.statusMessage = "Guardando...";
       absence.statusMessageType = "info";
 
       const { error } = await client
@@ -1062,7 +1060,7 @@ createApp({
       }, 2500);
     },
     async deleteAbsence(absenceId) {
-      if (!confirm("¿Eliminar esta ausencia?")) return;
+      if (!confirm("Â¿Eliminar esta ausencia?")) return;
       const { error } = await client.from("absences").delete().eq("id", absenceId);
       if (error) {
         alert("Error al eliminar ausencia: " + error.message);
@@ -1311,3 +1309,6 @@ createApp({
     }
   }
 }).mount("#app");
+
+
+
