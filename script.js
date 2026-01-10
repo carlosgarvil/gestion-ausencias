@@ -1060,7 +1060,7 @@ createApp({
       }, 2500);
     },
     async deleteAbsence(absenceId) {
-      if (!confirm("Â¿Eliminar esta ausencia?")) return;
+      if (!confirm("¿Eliminar esta ausencia?")) return;
       const { error } = await client.from("absences").delete().eq("id", absenceId);
       if (error) {
         alert("Error al eliminar ausencia: " + error.message);
