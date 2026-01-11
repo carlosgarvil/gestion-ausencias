@@ -28,6 +28,8 @@ body {
     padding: 2rem;
 }
 
+
+
 .container {
     max-width: 1600px;
     margin: 0 auto;
@@ -413,7 +415,7 @@ tbody tr:hover td.teacher-name {
     margin-bottom: 1rem;
     opacity: 0.5;
 }
-
+/*
 @keyframes fadeInDown {
     from {
         opacity: 0;
@@ -447,7 +449,7 @@ tbody tr:hover td.teacher-name {
         transform: rotate(360deg);
     }
 }
-
+*/
 .tooltip {
     position: relative;
     cursor: help;
