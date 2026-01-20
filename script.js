@@ -354,9 +354,24 @@ createApp({
         editStart: row.start_slot,
         editEnd: row.end_slot,
         editMessage: "",
-        editMessageType: ""
+        editMessageType: "",
+        isDuplicate: false
       }));
+      
+      // Detectar profesores duplicados
+      this.markDuplicateTeachers();
       this.loadingAbsences = false;
+    },
+    markDuplicateTeachers() {
+      const teacherCount = {};
+      // Contar cuántas ausencias tiene cada profesor
+      this.absences.forEach((absence) => {
+        teacherCount[absence.teacher_name] = (teacherCount[absence.teacher_name] || 0) + 1;
+      });
+      // Marcar los que aparecen más de una vez
+      this.absences.forEach((absence) => {
+        absence.isDuplicate = teacherCount[absence.teacher_name] > 1;
+      });
     },
     async loadPanelData() {
       if (!this.panelDate) {

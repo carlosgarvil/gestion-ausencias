@@ -122,7 +122,7 @@
             <div id="list-container" class="absence-list">
               <p v-if="loadingAbsences">Cargando ausencias…</p>
               <p v-else-if="!absences.length">No hay ausencias registradas para este día.</p>
-              <article v-for="absence in absences" :key="absence.id" class="absence-item">
+              <article v-for="absence in absences" :key="absence.id" class="absence-item" :class="{ 'duplicate-teacher': absence.isDuplicate }">
                 <div class="absence-main" @click="toggleAbsenceEdit(absence)">
                   <strong>{{ absence.teacher_name }}</strong>
                   <div class="absence-meta">{{ formatSlotLabel(absence.start_slot, absence.end_slot) }}</div>

@@ -170,6 +170,13 @@ button {
   background: #fafafa;
 }
 
+.absence-item.duplicate-teacher {
+  background: #fff3cd;
+  border-color: #ffc107;
+  border-width: 2px;
+  box-shadow: 0 0 8px rgba(255, 193, 7, 0.3);
+}
+
 .absence-main {
   flex: 1;
 }
