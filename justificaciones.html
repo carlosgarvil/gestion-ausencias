@@ -59,6 +59,10 @@
       <section id="justifications-section">
         <div class="justifications-header">
           <h2> Justificantes</h2>
+          <label class="filter-checkbox">
+            <input type="checkbox" v-model="hideJustified" />
+            Ocultar justificados
+          </label>
           <label class="month-picker">
             Mes
             <input type="month" v-model="justificationsMonth" />
@@ -68,7 +72,7 @@
         <div class="justifications-content">
           <p v-if="loadingJustifications">Cargando ausencias…</p>
           <p v-else-if="justificationsMessage">{{ justificationsMessage }}</p>
-          <p v-else-if="!justifications.length">No hay ausencias registradas para este mes.</p>
+          <p v-else-if="!filteredJustifications.length">No hay ausencias registradas para este mes.</p>
 
           <table v-else class="justifications-table">
             <thead>
@@ -82,7 +86,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="justification in justifications" :key="justification.id">
+              <tr v-for="justification in filteredJustifications" :key="justification.id">
                 <td>{{ justification.teacher_name }}</td>
                 <td>{{ formatDateForDisplay(justification.date) }}</td>
                 <td>{{ getSlotLabel(justification.start_slot) }}</td>
@@ -114,7 +118,3 @@
 </body>
 
 </html>
-
-
-
-

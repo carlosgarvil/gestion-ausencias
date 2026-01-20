@@ -99,6 +99,7 @@ createApp({
       justifications: [],
       loadingJustifications: false,
       justificationsMessage: "",
+      hideJustified: false,
       substitutionForm: {
         teacher: "",
         newTeacherName: "",
@@ -124,6 +125,14 @@ createApp({
   },
   created() {
     this.initializeApp();
+  },
+  computed: {
+    filteredJustifications() {
+      if (this.hideJustified) {
+        return this.justifications.filter(j => j.status !== "Justificado");
+      }
+      return this.justifications;
+    }
   },
   watch: {
     listDate(newValue, oldValue) {
@@ -357,7 +366,7 @@ createApp({
         editMessageType: "",
         isDuplicate: false
       }));
-      
+
       // Detectar profesores duplicados
       this.markDuplicateTeachers();
       this.loadingAbsences = false;
@@ -1043,9 +1052,9 @@ createApp({
       absence.editMessage = "Cambios guardados";
       absence.editMessageType = "ok";
       function wait(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-  await wait(1000);
+        return new Promise(resolve => setTimeout(resolve, ms));
+      }
+      await wait(1000);
       absence.editing = false;
     },
     async updateJustificationStatus(absence, newStatus) {
