@@ -753,16 +753,33 @@
           return;
         }
 
-        const approvedCountByPersonCourse = new Map();
-        const keyPersonCourse = (name, curso) => normalizeForSort(name) + "|" + curso;
+        const personCourseStats = new Map(); // key -> { totalLectivo: 0, p27Lectivo: 0, p27Total: 0 }
+        const keyPersonCourse = (name, curso) => normalizeForSort(name) + "|" + curso; // Re-added helper
+        const getStats = (name, curso) => {
+          const k = keyPersonCourse(name, curso);
+          if (!personCourseStats.has(k)) personCourseStats.set(k, { totalLectivo: 0, p27Lectivo: 0, p27Total: 0 });
+          return personCourseStats.get(k);
+        };
 
-        for (const e of expanded) {
-          if (isEstadoAprobada(e["Estado"])) {
-            const k = keyPersonCourse(e["Nombre"], e._curso);
-            approvedCountByPersonCourse.set(k, (approvedCountByPersonCourse.get(k) || 0) + 1);
+        // 1. Count ALREADY APPROVED from ALL data (to track global limits)
+        for (const row of data) {
+          if (!isEstadoAprobada(row["Estado"])) continue;
+          const di = parseDateES(row["Fecha inicio"]);
+          const df = parseDateES(row["Fecha fin"]);
+          if (!di) continue;
+          const curso = cursoEscolarFromDate(di);
+          const ps = getStats(row["Nombre"], curso);
+
+          const inLectivo = withinInclusive(di, lectIni, lectFin) || (df && withinInclusive(df, lectIni, lectFin));
+          if (inLectivo) ps.totalLectivo++;
+
+          if (row["Motivo"] === P27) {
+            ps.p27Total++;
+            if (inLectivo) ps.p27Lectivo++;
           }
         }
 
+        // 2. Group expanded requests by day for processing
         const byDay = new Map();
         for (const e of expanded) {
           const k = e.lectiveDayISO;
@@ -785,10 +802,10 @@
           const free = Math.max(0, cupo - occupied);
 
           const pendingSorted = bucket.pending.slice().sort((a, b) => {
-            const ka = keyPersonCourse(a["Nombre"], a._curso);
-            const kb = keyPersonCourse(b["Nombre"], b._curso);
-            const aHas = (approvedCountByPersonCourse.get(ka) || 0) > 0 ? 1 : 0;
-            const bHas = (approvedCountByPersonCourse.get(kb) || 0) > 0 ? 1 : 0;
+            const sa = getStats(a["Nombre"], a._curso);
+            const sb = getStats(b["Nombre"], b._curso);
+            const aHas = sa.p27Lectivo > 0 ? 1 : 0;
+            const bHas = sb.p27Lectivo > 0 ? 1 : 0;
             if (aHas !== bHas) return aHas - bHas;
 
             const da = alphaKeyFromLetter(a._firstSurname, letra);
@@ -800,37 +817,45 @@
           });
 
           const accepted = new Set();
-          for (let i = 0; i < pendingSorted.length; i++) if (i < free) accepted.add(pendingSorted[i]);
+          let acceptedInThisDay = 0;
 
-          let acceptedCount = 0, rejectedCount = 0;
-
+          // Note: bucket.approved are already in resultRows? No, adding them below.
           for (const e of bucket.approved) {
             resultRows.push({ ...e, decision: "YA APROBADA (ocupa cupo)", reason: `Cuenta como plaza ocupada. Cupo=${cupo}, ocupadas=${occupied}, huecos=${free}.` });
           }
           for (const e of bucket.rejected) {
             resultRows.push({ ...e, decision: "YA RECHAZADA", reason: "No se recalcula porque ya consta como rechazada en el CSV." });
           }
-          for (const e of pendingSorted) {
-            const kpc = keyPersonCourse(e["Nombre"], e._curso);
-            const hadApproved = (approvedCountByPersonCourse.get(kpc) || 0);
 
-            if (accepted.has(e)) {
-              acceptedCount++;
+          for (const e of pendingSorted) {
+            const ps = getStats(e["Nombre"], e._curso);
+            let rejectReason = "";
+
+            if (acceptedInThisDay >= free) {
+              rejectReason = (free === 0)
+                ? `No hay huecos: cupo=${cupo}, ocupadas(aprobadas)=${occupied}.`
+                : `Supera el cupo tras aplicar prioridad y desempate (letra ${letra}). Huecos=${free}.`;
+            } else if (ps.totalLectivo >= 2) {
+              rejectReason = `Ya tiene ${ps.totalLectivo} solicitudes aprobadas en periodo lectivo (máx 2).`;
+            } else if (ps.p27Lectivo >= 2) {
+              rejectReason = `Ya tiene ${ps.p27Lectivo} permisos P.27 aprobados en periodo lectivo (máx 2).`;
+            } else if (ps.p27Total >= 6) {
+              rejectReason = `Ya tiene ${ps.p27Total} permisos P.27 aprobados en el curso (máx 6).`;
+            }
+
+            if (rejectReason) {
+              resultRows.push({ ...e, decision: "RECHAZAR (Límite/Cupo)", reason: rejectReason });
+            } else {
+              acceptedInThisDay++;
+              ps.totalLectivo++;
+              ps.p27Lectivo++;
+              ps.p27Total++;
               resultRows.push({
                 ...e,
                 decision: "ACEPTAR",
-                reason: (hadApproved > 0)
-                  ? `Entra por cupo tras ordenación. (Ojo: ya tiene ${hadApproved} P.27 lectivo aprobado en ${e._curso}.)`
-                  : `Prioridad: no tiene P.27 lectivo aprobado en ${e._curso}. Entra por cupo.`,
-              });
-            } else {
-              rejectedCount++;
-              resultRows.push({
-                ...e,
-                decision: "FUERA DE CUPO",
-                reason: (free === 0)
-                  ? `No hay huecos: cupo=${cupo}, ocupadas(aprobadas)=${occupied}.`
-                  : `Supera el cupo tras aplicar prioridad y desempate (letra ${letra}). Huecos=${free}.`,
+                reason: (ps.p27Lectivo === 1)
+                  ? `Prioridad: no tenía P.27 lectivo aprobado. Entra por cupo.`
+                  : `Entra por cupo tras ordenación.`,
               });
             }
           }
@@ -840,8 +865,8 @@
             approved: bucket.approved.length,
             pending: bucket.pending.length,
             slots: cupo,
-            accepted: acceptedCount,
-            rejected: rejectedCount,
+            accepted: acceptedInThisDay,
+            rejected: bucket.pending.length - acceptedInThisDay,
           });
         }
 
