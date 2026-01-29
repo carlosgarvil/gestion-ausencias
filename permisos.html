@@ -110,6 +110,16 @@
       background: #f8f8f8;
     }
 
+    .pill-button {
+      cursor: pointer;
+      line-height: 1.2;
+    }
+
+    .pill-button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
     .ok {
       background: #ecfdf5;
       border-color: #a7f3d0;
@@ -265,10 +275,10 @@
       <nav class="top-nav">
         <a class="nav-link" href="index.html">Ausencias</a>
         <a class="nav-link" href="panel.html">Panel</a>
-        <a class="nav-link" href="justificaciones.html">Justificantes</a>
-        <a class="nav-link" href="profesorado.html">Profesorado</a>
-        <a class="nav-link" href="gestion_profesorado.html">Gestión del profesorado</a>
-        <a class="nav-link active" href="permisos.html">Permisos</a>
+        <a class="nav-link" href="justificaciones.html">Gestión de Justificantes</a>
+        <a class="nav-link" href="profesorado.html">Horario del Profesorado</a>
+        <a class="nav-link" href="gestion_profesorado.html">Añadir/quitar profesorado</a>
+        <a class="nav-link active" href="permisos.html">Permisos P27</a>
         <a class="nav-link" href="control-presencia.html">Control de presencia</a>
         <a class="nav-link" href="ayuda.html">Ayuda</a>
       </nav>
@@ -493,6 +503,8 @@
        *  ========================= */
       const P27 = "P.27. Permisos por asuntos particulares retribuidos";
       const ALPHA = "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ".split("");
+      const ABSENCE_START_SLOT = 1;
+      const ABSENCE_END_SLOT = 14;
 
       function alphaKeyFromLetter(surnameFirst, startLetter) {
         const norm = normalizeForSort(surnameFirst);
@@ -546,6 +558,7 @@
 
       let lastResultRows = [];
       let lastResultHeaders = [];
+      const registeringRows = new Set();
 
       function setError(msg) {
         els.err.style.display = msg ? "block" : "none";
@@ -607,6 +620,29 @@
         }
       }
 
+      async function registerAbsenceForRow(dayISO, teacherName) {
+        if (!client || typeof client.from !== "function") {
+          throw new Error("No se pudo conectar con la base de datos.");
+        }
+
+        const cleanTeacher = String(teacherName || "").trim();
+        if (!cleanTeacher || !dayISO) return { inserted: 0 };
+
+        const payload = {
+          teacher_name: cleanTeacher,
+          date: dayISO,
+          start_slot: ABSENCE_START_SLOT,
+          end_slot: ABSENCE_END_SLOT,
+          status: "Justificado",
+          reason: P27,
+          planned: true
+        };
+
+        const { error } = await client.from("absences").insert([payload]);
+        if (error) throw error;
+        return { inserted: 1 };
+      }
+
 
       function renderTable(rows) {
         if (!rows.length) {
@@ -626,8 +662,11 @@
       </tr></thead><tbody>`;
 
         const body = rows.map(r => {
+          const hasAcceptAction = r.decision === "ACEPTAR" && r.lectiveDayISO && r.Nombre;
           const pill = r.decision === "ACEPTAR"
-            ? `<span class="pill ok">ACEPTAR</span>`
+            ? (hasAcceptAction
+              ? `<button type="button" class="pill ok pill-button js-accept-row" data-day="${escapeHtml(r.lectiveDayISO)}" data-teacher="${escapeHtml(r.Nombre)}">ACEPTAR</button>`
+              : `<span class="pill ok">ACEPTAR</span>`)
             : r.decision.startsWith("FUERA")
               ? `<span class="pill bad">${escapeHtml(r.decision)}</span>`
               : r.decision.startsWith("YA APROBADA")
@@ -674,6 +713,41 @@
       els.exportBtn.addEventListener("click", () => {
         if (!lastResultRows.length) return;
         downloadCSV("resultado_p27_lectivo.csv", lastResultHeaders, lastResultRows);
+      });
+
+      els.tableWrap.addEventListener("click", async (event) => {
+        const btn = event.target.closest(".js-accept-row");
+        if (!btn) return;
+
+        const dayISO = btn.dataset.day;
+        const teacherName = btn.dataset.teacher;
+        if (!dayISO || !teacherName) return;
+
+        const key = `${teacherName}__${dayISO}`;
+        if (registeringRows.has(key)) return;
+
+        const confirmMsg = `¿Registrar ausencia justificada para ${teacherName} el día ${dayISO}?`;
+        if (!confirm(confirmMsg)) return;
+
+        const originalText = btn.textContent;
+        registeringRows.add(key);
+        btn.disabled = true;
+        btn.textContent = "Guardando...";
+        setError("");
+        setStatus("Registrando ausencias...", "warn");
+
+        try {
+          const result = await registerAbsenceForRow(dayISO, teacherName);
+          btn.textContent = `Registrado (${result.inserted})`;
+          setStatus("Ausencias registradas", "ok");
+        } catch (error) {
+          btn.textContent = originalText;
+          btn.disabled = false;
+          setError(`Error al registrar ausencias: ${error.message}`);
+          setStatus("Error al registrar", "bad");
+        } finally {
+          registeringRows.delete(key);
+        }
       });
 
       /** Set defaults al cargar */

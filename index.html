@@ -48,10 +48,10 @@
       <nav class="top-nav">
         <a class="nav-link active" href="index.html">Ausencias</a>
         <a class="nav-link" href="panel.html">Panel</a>
-        <a class="nav-link" href="justificaciones.html">Justificantes</a>
-        <a class="nav-link" href="profesorado.html">Profesorado</a>
-        <a class="nav-link" href="gestion_profesorado.html">Gestión del profesorado</a>
-        <a class="nav-link" href="permisos.html">Permisos</a>
+        <a class="nav-link" href="justificaciones.html">Gestión de Justificantes</a>
+        <a class="nav-link" href="profesorado.html">Horario del Profesorado</a>
+        <a class="nav-link" href="gestion_profesorado.html">Añadir/quitar profesorado</a>
+        <a class="nav-link" href="permisos.html">Permisos P27</a>
         <a class="nav-link" href="control-presencia.html">Control de presencia</a>
         <a class="nav-link" href="ayuda.html">Ayuda</a>
       </nav>
@@ -103,6 +103,12 @@
               <label>
                 Motivo (opcional)
                 <textarea v-model="absenceForm.reason" rows="2"></textarea>
+              </label>
+
+              <label class="checkbox-row">
+                <input type="checkbox" v-model="absenceForm.justified" />
+                Marcar como justificada
+                <span class="tooltip-icon" title="Permite registrar la ausencia directamente como justificada. Útil para bajas laborales." aria-label="Permite registrar la ausencia directamente como justificada. Útil para bajas laborales." role="img">ℹ️</span>
               </label>
 
               <button type="submit" class="btn-save">Guardar ausencia</button>
@@ -165,7 +171,4 @@
 </body>
 
 </html>
-
-
-
 

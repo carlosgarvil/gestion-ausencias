@@ -54,6 +54,15 @@ function getTodayISO() {
   return `${year}-${month}-${day}`;
 }
 
+function parseISODate(value) {
+  if (!value) return null;
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const date = new Date(year, month - 1, day);
+  if (Number.isNaN(date.getTime())) return null;
+  return date;
+}
+
 function getCurrentMonthValue() {
   const today = new Date();
   const year = today.getFullYear();
@@ -84,7 +93,8 @@ createApp({
         dateTo: "",
         startSlot: SLOT_OPTIONS[0].value,
         endSlot: SLOT_OPTIONS[SLOT_OPTIONS.length - 1].value,
-        reason: ""
+        reason: "",
+        justified: false
       },
       listDate: "",
       absences: [],
@@ -271,17 +281,22 @@ createApp({
       if (!from) return [];
       if (!to) return [from];
 
-      const start = new Date(`${from}T00:00:00`);
-      const end = new Date(`${to}T00:00:00`);
+      const start = parseISODate(from);
+      const end = parseISODate(to);
+      if (!start || !end) return null;
       if (end < start) return null;
 
       const dates = [];
       const current = new Date(start);
       while (current <= end) {
+        const dayOfWeek = current.getDay();
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
         const year = current.getFullYear();
         const month = String(current.getMonth() + 1).padStart(2, "0");
         const day = String(current.getDate()).padStart(2, "0");
-        dates.push(`${year}-${month}-${day}`);
+        if (!isWeekend) {
+          dates.push(`${year}-${month}-${day}`);
+        }
         current.setDate(current.getDate() + 1);
       }
       return dates;
@@ -290,7 +305,8 @@ createApp({
       this.absenceMessage = "";
       this.absenceMessageType = "";
 
-      const { teacher, dateFrom, dateTo, startSlot, endSlot, reason } = this.absenceForm;
+      const { teacher, dateFrom, dateTo, startSlot, endSlot, reason, justified } =
+        this.absenceForm;
 
       if (!teacher || !dateFrom) {
         this.absenceMessage = "Completa profesor/a y fecha desde.";
@@ -317,6 +333,7 @@ createApp({
         start_slot: startSlot,
         end_slot: endSlot,
         reason: reason?.trim() || null,
+        status: justified ? "Justificado" : "",
         planned: true
       }));
 
@@ -333,6 +350,7 @@ createApp({
       this.absenceForm.teacher = "";
       this.absenceForm.dateTo = "";
       this.absenceForm.reason = "";
+      this.absenceForm.justified = false;
       this.absenceForm.startSlot = SLOT_OPTIONS[0].value;
       this.absenceForm.endSlot = SLOT_OPTIONS[SLOT_OPTIONS.length - 1].value;
       this.setTodayDefaults();
@@ -1333,6 +1351,3 @@ createApp({
     }
   }
 }).mount("#app");
-
-
-
