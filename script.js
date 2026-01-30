@@ -105,6 +105,11 @@ createApp({
       panelRows: [],
       loadingPanel: false,
       panelMessage: "",
+      tasksDate: "",
+      tasksRows: [],
+      loadingTasks: false,
+      tasksMessage: "",
+      hasTasksPage: false,
       justificationsMonth: getCurrentMonthValue(),
       justifications: [],
       loadingJustifications: false,
@@ -136,6 +141,12 @@ createApp({
   created() {
     this.initializeApp();
   },
+  mounted() {
+    this.hasTasksPage = Boolean(document.getElementById("tasks-section"));
+    if (this.hasTasksPage && this.isLoggedIn) {
+      this.loadTasksForDate();
+    }
+  },
   computed: {
     filteredJustifications() {
       if (this.hideJustified) {
@@ -153,6 +164,11 @@ createApp({
     panelDate(newValue, oldValue) {
       if (newValue && newValue !== oldValue && this.isLoggedIn) {
         this.loadPanelData();
+      }
+    },
+    tasksDate(newValue, oldValue) {
+      if (newValue && newValue !== oldValue && this.isLoggedIn) {
+        this.loadTasksForDate();
       }
     },
     justificationsMonth(newValue, oldValue) {
@@ -189,6 +205,7 @@ createApp({
       this.absenceForm.dateFrom = today;
       this.listDate = today;
       this.panelDate = today;
+      this.tasksDate = today;
     },
     async checkSession() {
       const { data } = await client.auth.getSession();
@@ -225,6 +242,9 @@ createApp({
       this.panelRows = [];
       this.panelMessage = "";
       this.loadingPanel = false;
+      this.tasksRows = [];
+      this.tasksMessage = "";
+      this.loadingTasks = false;
       this.justifications = [];
       this.loadingJustifications = false;
       this.justificationsMessage = "";
@@ -258,6 +278,7 @@ createApp({
       this.setTodayDefaults();
       await this.loadAbsencesForDate();
       await this.loadPanelData();
+      await this.loadTasksForDate();
       await this.loadJustifications();
       if (this.teacherScheduleTeacher) {
         await this.loadTeacherSchedule();
@@ -426,6 +447,59 @@ createApp({
         this.panelMessage = "No hay clases pendientes de cubrir para este día.";
       }
       this.loadingPanel = false;
+    },
+    async loadTasksForDate() {
+      if (!this.tasksDate) {
+        this.tasksDate = getTodayISO();
+      }
+      this.loadingTasks = true;
+      this.tasksMessage = "";
+
+      const { data, error } = await client
+        .from("absences")
+        .select("*")
+        .eq("date", this.tasksDate)
+        .order("start_slot", { ascending: true })
+        .order("teacher_name", { ascending: true });
+
+      if (error) {
+        console.error("Error cargando tareas del día:", error);
+        this.tasksRows = [];
+        this.tasksMessage = "No se pudieron cargar las tareas.";
+        this.loadingTasks = false;
+        return;
+      }
+
+      const weekdayValue = this.getWeekdayValueFromDate(this.tasksDate);
+      const teachers = Array.from(
+        new Set(
+          (data || [])
+            .map((absence) => this.getAbsenceTeacher(absence))
+            .filter((name) => typeof name === "string" && name.trim())
+        )
+      );
+      let timetableEntries = [];
+      if (teachers.length) {
+        const { data: timetableData, error: timetableError } = await client
+          .from("timetable")
+          .select("*")
+          .in("teacher_name", teachers);
+        if (timetableError) {
+          console.error("Error cargando horario para tareas:", timetableError);
+        } else {
+          timetableEntries = timetableData || [];
+        }
+      }
+
+      this.tasksRows = this.mapAbsencesToTaskRows(
+        data || [],
+        timetableEntries,
+        weekdayValue
+      );
+      if (!this.tasksRows.length) {
+        this.tasksMessage = "No hay tareas registradas para este día.";
+      }
+      this.loadingTasks = false;
     },
     getMonthDateRange(monthValue) {
       if (!monthValue) return null;
@@ -598,6 +672,262 @@ createApp({
             subject: Array.from(teacherRow.subjects).join(", "),
             classroom: Array.from(teacherRow.classrooms).join(", "),
             teacher: teacherRow.teacher
+          });
+        });
+      });
+
+      return groupedRows;
+    },
+    getAbsenceGroup(absence) {
+      const candidates = [
+        absence.group_name,
+        absence.group,
+        absence.class_group,
+        absence.grupo,
+        absence.course,
+        absence.curso
+      ];
+
+      for (const candidate of candidates) {
+        if (typeof candidate === "string") {
+          const trimmed = candidate.trim();
+          if (trimmed) {
+            return trimmed;
+          }
+        } else if (candidate !== null && candidate !== undefined) {
+          return String(candidate);
+        }
+      }
+
+      return "—";
+    },
+    getAbsenceTeacher(absence) {
+      const candidates = [
+        absence.teacher_name,
+        absence.teacher,
+        absence.teacher_display_name,
+        absence.docente,
+        absence.profesor,
+        absence.profesorado
+      ];
+
+      for (const candidate of candidates) {
+        if (typeof candidate === "string") {
+          const trimmed = candidate.trim();
+          if (trimmed) {
+            return trimmed;
+          }
+        } else if (candidate !== null && candidate !== undefined) {
+          return String(candidate);
+        }
+      }
+
+      return "";
+    },
+    getTimetableTeacherKey(entry) {
+      const source = entry.original || entry;
+      const candidates = [
+        source.teacher_name,
+        source.teacher,
+        source.teacher_display_name,
+        source.teacher_full_name,
+        source.docente,
+        source.profesor
+      ];
+
+      for (const candidate of candidates) {
+        if (typeof candidate === "string") {
+          const trimmed = candidate.trim();
+          if (trimmed) {
+            return trimmed.toLowerCase();
+          }
+        }
+      }
+
+      return "";
+    },
+    getAbsenceClassroom(absence) {
+      const candidates = [
+        absence.classroom,
+        absence.room,
+        absence.aula,
+        absence.classroom_name,
+        absence.classroom_number
+      ];
+
+      for (const candidate of candidates) {
+        if (typeof candidate === "string") {
+          const trimmed = candidate.trim();
+          if (trimmed) {
+            return trimmed;
+          }
+        } else if (candidate !== null && candidate !== undefined) {
+          return String(candidate);
+        }
+      }
+
+      return "—";
+    },
+    getWeekdayValueFromDate(dateValue) {
+      const date = parseISODate(dateValue);
+      if (!date) return null;
+      const jsDay = date.getDay(); // 0=domingo ... 6=sábado
+      if (jsDay === 0) return 7;
+      return jsDay;
+    },
+    normalizeTasksValue(value) {
+      if (value === null || value === undefined) {
+        return "Sin tareas";
+      }
+
+      if (Array.isArray(value)) {
+        const items = value
+          .map((item) => (item === null || item === undefined ? "" : String(item).trim()))
+          .filter(Boolean);
+        return items.length ? items.join("; ") : "Sin tareas";
+      }
+
+      if (typeof value === "object") {
+        if ("tasks" in value) {
+          return this.normalizeTasksValue(value.tasks);
+        }
+        if ("task" in value) {
+          return this.normalizeTasksValue(value.task);
+        }
+        return JSON.stringify(value);
+      }
+
+      if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (!trimmed) {
+          return "Sin tareas";
+        }
+        const looksLikeJson =
+          (trimmed.startsWith("[") && trimmed.endsWith("]")) ||
+          (trimmed.startsWith("{") && trimmed.endsWith("}"));
+        if (looksLikeJson) {
+          try {
+            const parsed = JSON.parse(trimmed);
+            return this.normalizeTasksValue(parsed);
+          } catch (_error) {
+            return trimmed;
+          }
+        }
+        return trimmed;
+      }
+
+      return String(value);
+    },
+    mapAbsencesToTaskRows(absences = [], timetableEntries = [], weekdayValue = null) {
+      const rows = [];
+      const normalizedTimetable = (timetableEntries || [])
+        .map((entry) => this.normalizeTimetableEntry(entry))
+        .filter((entry) =>
+          weekdayValue ? entry.weekdayValue === weekdayValue : true
+        );
+      const timetableByTeacher = new Map();
+      normalizedTimetable.forEach((entry) => {
+        const key = this.getTimetableTeacherKey(entry);
+        if (!key) {
+          return;
+        }
+        if (!timetableByTeacher.has(key)) {
+          timetableByTeacher.set(key, []);
+        }
+        timetableByTeacher.get(key).push(entry);
+      });
+
+      absences.forEach((absence) => {
+        const teacher = this.getAbsenceTeacher(absence);
+        const teacherKey = teacher.trim().toLowerCase();
+        const teacherEntries = timetableByTeacher.get(teacherKey) || [];
+        const tasksText = this.normalizeTasksValue(
+          absence.tasks ?? absence.task ?? absence.task_list
+        );
+        const taskItems =
+          tasksText && tasksText !== "Sin tareas"
+            ? tasksText.split(";").map((item) => item.trim()).filter(Boolean)
+            : [tasksText || "Sin tareas"];
+
+        const start = Number(absence.start_slot);
+        const end = Number(absence.end_slot);
+        let matchingEntries = [];
+        if (Number.isFinite(start) && Number.isFinite(end) && end >= start) {
+          matchingEntries = teacherEntries.filter(
+            (entry) =>
+              Number.isFinite(entry.slotValue) &&
+              entry.slotValue >= start &&
+              entry.slotValue <= end
+          );
+        } else {
+          const slotValue = this.normalizeSlotValue(absence);
+          if (Number.isFinite(slotValue)) {
+            matchingEntries = teacherEntries.filter(
+              (entry) => entry.slotValue === slotValue
+            );
+          } else {
+            matchingEntries = teacherEntries;
+          }
+        }
+
+        if (!matchingEntries.length) {
+          return;
+        }
+
+        matchingEntries.forEach((entry) => {
+          const groupValue = entry.group?.trim?.() || "";
+          const classroomValue = entry.classroom?.trim?.() || "";
+          if (!groupValue) {
+            return;
+          }
+          const slotLabel = Number.isFinite(entry.slotValue)
+            ? this.getSlotLabel(entry.slotValue)
+            : "—";
+          taskItems.forEach((task) => {
+            rows.push({
+              slotValue: Number.isFinite(entry.slotValue) ? entry.slotValue : null,
+              slotLabel,
+              group: groupValue,
+              classroom: classroomValue || "—",
+              task
+            });
+          });
+        });
+      });
+
+      const normalizedRows = rows.sort((a, b) => {
+        if (a.task === b.task) {
+          if (a.slotValue === null) return 1;
+          if (b.slotValue === null) return -1;
+          if (a.slotValue === b.slotValue) {
+            return a.group.localeCompare(b.group);
+          }
+          return a.slotValue - b.slotValue;
+        }
+        return a.task.localeCompare(b.task);
+      });
+
+      const taskGroups = new Map();
+      normalizedRows.forEach((row) => {
+        const taskKey = row.task || "Sin tareas";
+        if (!taskGroups.has(taskKey)) {
+          taskGroups.set(taskKey, []);
+        }
+        taskGroups.get(taskKey).push(row);
+      });
+
+      const groupedRows = [];
+      Array.from(taskGroups.entries()).forEach(([task, taskRows]) => {
+        const taskRowSpan = taskRows.length;
+        taskRows.forEach((row, index) => {
+          groupedRows.push({
+            key: `${task}-${row.group}-${row.slotValue ?? row.slotLabel}-${index}`,
+            task,
+            showTaskLabel: index === 0,
+            taskRowSpan,
+            group: row.group,
+            classroom: row.classroom,
+            slotLabel: row.slotLabel
           });
         });
       });
