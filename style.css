@@ -117,6 +117,26 @@ button {
   gap: 0.75rem;
 }
 
+.panel-link button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0;
+}
+
+.panel-link-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.panel-link-qr {
+  display: none;
+  width: 140px;
+  height: auto;
+}
+
 @media (min-width: 640px) {
   .panel-header {
     flex-direction: row;
@@ -869,6 +889,7 @@ table tbody tr:hover td {
   .app-header,
   .top-nav,
   .panel-controls,
+  #btn-print,
   .btn-refresh,
   .btn-save,
   .btn-delete,
@@ -881,6 +902,16 @@ table tbody tr:hover td {
   .substitutions-layout,
   #help-section {
     display: none;
+  }
+
+  .panel-link button {
+    display: none;
+  }
+
+  .panel-link-qr {
+    display: block;
+    width: 160px;
+    margin-top: 0.25rem;
   }
 
   .panel-table-wrapper {

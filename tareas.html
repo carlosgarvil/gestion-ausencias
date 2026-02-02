@@ -60,9 +60,18 @@
 
       <section id="tasks-section">
         <div class="panel-header">
-          <h2>Tareas del día <button id="btn-print" onclick="window.print()">
+          <h2>Tareas del día</h2> 
+            <button id="btn-print" onclick="window.print()">
               Imprimir / PDF
-            </button></h2>
+            </button>
+            <a class="panel-link" href="https://drive.google.com/drive/folders/1RRHA17OY5JTmvCRK5buK5kBzJmgpYxrz2_HFMOudcJAv3hoySdyy-iHu9voHTnLFT6aN0Fg3?usp=drive_link" target="_blank" rel="noopener">
+              <button>
+                <img src="img/gdrive_icon.png" alt="" class="panel-link-icon">
+                Archivos adjuntos
+              </button>
+              <img src="img/carpeta_adjuntos.png" alt="QR Carpeta Drive" class="panel-link-qr">
+            </a>
+          
           <div class="panel-controls">
             <label>
               Fecha
@@ -78,19 +87,22 @@
           <table v-else class="panel-table">
             <thead>
               <tr>
-                <th>Franja horaria</th>
-                <th>Grupo y aula</th>
+                <th>Profesor</th>
+                <th>Franja horaria (grupo y aula)</th>
                 <th>Tareas</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(row, index) in tasksRows" :key="row.key || `${row.task}-${index}-${row.group}`">
-                <td>{{ row.slotLabel }}</td>
+              <tr v-for="(row, index) in tasksRows" :key="row.key || `${row.teacher}-${index}`">
                 <td>
-                  <span>{{ row.group }}</span>
-                  <span v-if="row.classroom && row.classroom !== '—'"> · {{ row.classroom }}</span>
+                  {{ row.teacher }}
                 </td>
-                <td v-if="row.showTaskLabel" :rowspan="row.taskRowSpan">{{ row.task }}</td>
+                <td>
+                  <span v-for="(slotLine, slotIndex) in row.slotLines" :key="`${row.key}-slot-${slotIndex}`">
+                    {{ slotLine }}<br v-if="slotIndex < row.slotLines.length - 1">
+                  </span>
+                </td>
+                <td>{{ row.task }}</td>
               </tr>
             </tbody>
           </table>

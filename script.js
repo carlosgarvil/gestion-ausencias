@@ -844,10 +844,6 @@ createApp({
         const tasksText = this.normalizeTasksValue(
           absence.tasks ?? absence.task ?? absence.task_list
         );
-        const taskItems =
-          tasksText && tasksText !== "Sin tareas"
-            ? tasksText.split(";").map((item) => item.trim()).filter(Boolean)
-            : [tasksText || "Sin tareas"];
 
         const start = Number(absence.start_slot);
         const end = Number(absence.end_slot);
@@ -874,65 +870,63 @@ createApp({
           return;
         }
 
-        matchingEntries.forEach((entry) => {
-          const groupValue = entry.group?.trim?.() || "";
-          const classroomValue = entry.classroom?.trim?.() || "";
-          if (!groupValue) {
-            return;
-          }
-          const slotLabel = Number.isFinite(entry.slotValue)
-            ? this.getSlotLabel(entry.slotValue)
-            : "—";
-          taskItems.forEach((task) => {
-            rows.push({
-              slotValue: Number.isFinite(entry.slotValue) ? entry.slotValue : null,
-              slotLabel,
-              group: groupValue,
-              classroom: classroomValue || "—",
-              task
-            });
+        const slotLines = [];
+        const slotLineSet = new Set();
+        let minSlotValue = null;
+        matchingEntries
+          .slice()
+          .sort((a, b) => {
+            if (a.slotValue === null) return 1;
+            if (b.slotValue === null) return -1;
+            return a.slotValue - b.slotValue;
+          })
+          .forEach((entry) => {
+            const groupValue = entry.group?.trim?.() || "";
+            const classroomValue = entry.classroom?.trim?.() || "";
+            if (!groupValue) {
+              return;
+            }
+            const slotLabel = Number.isFinite(entry.slotValue)
+              ? this.getSlotLabel(entry.slotValue)
+              : "—";
+            const classroomLabel = classroomValue || "—";
+            const slotLine = `${slotLabel} (${groupValue} · ${classroomLabel})`;
+            if (!slotLineSet.has(slotLine)) {
+              slotLineSet.add(slotLine);
+              slotLines.push(slotLine);
+            }
+            if (Number.isFinite(entry.slotValue)) {
+              if (minSlotValue === null || entry.slotValue < minSlotValue) {
+                minSlotValue = entry.slotValue;
+              }
+            }
           });
+
+        if (!slotLines.length) {
+          return;
+        }
+
+        rows.push({
+          key: `${teacherKey}-${absence.id ?? tasksText}-${rows.length}`,
+          teacher,
+          slotLines,
+          task: tasksText || "Sin tareas",
+          sortSlot: minSlotValue
         });
       });
 
-      const normalizedRows = rows.sort((a, b) => {
-        if (a.task === b.task) {
-          if (a.slotValue === null) return 1;
-          if (b.slotValue === null) return -1;
-          if (a.slotValue === b.slotValue) {
-            return a.group.localeCompare(b.group);
-          }
-          return a.slotValue - b.slotValue;
+      return rows.sort((a, b) => {
+        const teacherCompare = a.teacher.localeCompare(b.teacher);
+        if (teacherCompare !== 0) {
+          return teacherCompare;
         }
-        return a.task.localeCompare(b.task);
-      });
-
-      const taskGroups = new Map();
-      normalizedRows.forEach((row) => {
-        const taskKey = row.task || "Sin tareas";
-        if (!taskGroups.has(taskKey)) {
-          taskGroups.set(taskKey, []);
+        if (a.sortSlot === null) return 1;
+        if (b.sortSlot === null) return -1;
+        if (a.sortSlot === b.sortSlot) {
+          return a.task.localeCompare(b.task);
         }
-        taskGroups.get(taskKey).push(row);
+        return a.sortSlot - b.sortSlot;
       });
-
-      const groupedRows = [];
-      Array.from(taskGroups.entries()).forEach(([task, taskRows]) => {
-        const taskRowSpan = taskRows.length;
-        taskRows.forEach((row, index) => {
-          groupedRows.push({
-            key: `${task}-${row.group}-${row.slotValue ?? row.slotLabel}-${index}`,
-            task,
-            showTaskLabel: index === 0,
-            taskRowSpan,
-            group: row.group,
-            classroom: row.classroom,
-            slotLabel: row.slotLabel
-          });
-        });
-      });
-
-      return groupedRows;
     },
     buildEmptyTeacherScheduleGrid() {
       return this.slotOptions.map((slot) => ({
