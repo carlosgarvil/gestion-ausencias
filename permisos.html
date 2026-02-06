@@ -138,6 +138,13 @@
       color: #92400e;
     }
 
+    td.cell-match {
+      background: #f3d973 !important;
+      border-color: #fde68a;
+      color: #92400e;
+      font-weight: 700;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -588,14 +595,15 @@
 
         let html = `<table>
         <thead><tr>
-          <th>Día</th><th>Total</th><th>Aprobadas (ocupan)</th><th>Pendientes</th><th>Cupo</th><th>Huecos</th><th>Entrarían</th><th>Fuera</th>
+          <th>Día</th><th>Aprobadas</th><th>Pendientes</th><th>Total</th><th>Entrarían</th><th>Fuera</th>
         </tr></thead><tbody>`;
 
         const maxedDays = [];
 
         for (const day of days) {
           const s = byDay.get(day);
-          const free = Math.max(0, s.slots - s.approved);
+          const total = s.approved + s.pending;
+          const totalMatchesCupo = total === s.slots;
 
           if ((s.approved + s.accepted) >= s.slots) {
             maxedDays.push(day);
@@ -603,11 +611,9 @@
 
           html += `<tr>
           <td class="mono">${day}</td>
-          <td>${s.total}</td>
           <td>${s.approved}</td>
           <td>${s.pending}</td>
-          <td>${s.slots}</td>
-          <td>${free}</td>
+          <td class="${totalMatchesCupo ? "cell-match" : ""}">${total}</td>
           <td><span class="pill ok">${s.accepted}</span></td>
           <td><span class="pill bad">${s.rejected}</span></td>
         </tr>`;
