@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Gestión de ausencias - IES Polígono Sur</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png" />
+  <link rel="shortcut icon" href="img/favicon.ico" />
+  <meta name="msapplication-TileColor" content="#2b5797" />
+  <meta name="msapplication-TileImage" content="img/android-chrome-192x192.png" />
+  <meta name="theme-color" content="#ffffff" />
+</head>
+
+<body>
+  <div id="app">
+    <h1>Gestión de ausencias del profesorado</h1>
+
+    <section id="login-section" v-if="!isLoggedIn">
+      <h2>Acceso</h2>
+      <form @submit.prevent="handleLogin">
+        <label>
+          Correo
+          <input type="email" v-model="loginForm.email" required />
+        </label>
+        <label>
+          Contraseña
+          <input type="password" v-model="loginForm.password" required />
+        </label>
+        <button type="submit">Entrar</button>
+        <div v-if="loginMessage" class="message" :class="loginMessageType">{{ loginMessage }}</div>
+      </form>
+    </section>
+
+    <section id="app-section" v-else>
+      <header class="app-header">
+        <div class="header-left">
+          <span class="session-text">
+            Sesión iniciada como <strong>{{ userEmail }}</strong>
+          </span>
+        </div>
+        <button id="btn-logout" type="button" class="btn-logout" @click="handleLogout">Cerrar sesión</button>
+      </header>
+      <nav class="top-nav">
+        <a class="nav-link" href="index.html">Ausencias</a>
+        <a class="nav-link" href="panel.html">Panel</a>
+        <a class="nav-link" href="tareas.html">Tareas</a>
+        <a class="nav-link" href="justificaciones.html">Gestión de Justificantes</a>
+        <a class="nav-link" href="profesorado.html">Horario del Profesorado</a>
+        <a class="nav-link active" href="horario-grupos.html">Horario de Grupos</a>
+        <a class="nav-link" href="gestion_profesorado.html">Añadir/quitar profesorado</a>
+        <a class="nav-link" href="permisos.html">Permisos P27</a>
+        <a class="nav-link" href="control-presencia.html">Control de presencia</a>
+        <a class="nav-link" href="ayuda.html">Ayuda</a>
+      </nav>
+
+      <section id="teachers-section">
+        <div class="teacher-schedule-header">
+          <div>
+            <h2>Horario Semanal del Grupo</h2>
+            <p class="absence-meta">Selecciona un grupo para visualizar su horario semanal completo.</p>
+          </div>
+          <div class="teacher-schedule-controls">
+            <label>
+              Grupo
+              <select v-model="selectedGroup">
+                <option value="">Selecciona…</option>
+                <option v-for="group in groups" :key="`group-${group}`" :value="group">{{ group }}</option>
+              </select>
+            </label>
+            <label>
+              <input type="checkbox" v-model="showAbsences" />
+              Mostrar ausencias
+            </label>
+            <button type="button" class="btn-refresh" @click="loadGroupSchedule"
+              :disabled="!selectedGroup || loadingGroupSchedule">
+              Actualizar
+            </button>
+          </div>
+        </div>
+
+        <details v-if="showAbsences && selectedGroup" class="group-absence-simulator" open>
+          <summary>Simular ausencias adicionales del grupo</summary>
+          <p class="absence-meta">
+            Marca profesorado para simular su ausencia en esta vista. No se guardan cambios en la base de datos.
+          </p>
+          <p v-if="!groupTeachers.length" class="absence-meta">
+            No hay profesorado asociado a este grupo.
+          </p>
+          <div v-else class="simulated-absence-list">
+            <label v-for="teacher in groupTeachers" :key="`simulate-${teacher}`" class="simulated-absence-item">
+              <input v-if="isTeacherReallyAbsentToday(teacher)" type="checkbox" checked disabled />
+              <input v-else type="checkbox" :value="teacher" v-model="simulatedAbsentTeachers" />
+              {{ teacher }}
+              <span v-if="isTeacherReallyAbsentToday(teacher)" class="schedule-badge">Ausente hoy</span>
+            </label>
+          </div>
+          <button type="button" class="btn-secondary" @click="clearSimulatedAbsences"
+            :disabled="!simulatedAbsentTeachers.length">
+            Limpiar simulación
+          </button>
+        </details>
+
+        <div class="teacher-schedule-content">
+          <p v-if="!selectedGroup" class="absence-meta">Selecciona un grupo para cargar su horario.</p>
+          <p v-else-if="loadingGroupSchedule" class="absence-meta">Cargando horario…</p>
+          <p v-else-if="groupScheduleMessage" class="absence-meta">{{ groupScheduleMessage }}</p>
+          <div v-else class="teacher-schedule-grid">
+            <table class="schedule-table">
+              <thead>
+                <tr>
+                  <th>Franja</th>
+                  <th v-for="day in weekDays" :key="`day-${day.value}`">{{ day.label }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in groupScheduleGrid" :key="`slot-${row.slotValue}`">
+                  <th>{{ row.slotLabel }}</th>
+                  <td v-for="(cell, index) in row.days" :key="`cell-${row.slotValue}-${index}`">
+                    <div v-if="cell.length" class="schedule-cell">
+                      <article v-for="(classInfo, idx) in cell" :key="`class-${row.slotValue}-${index}-${idx}`"
+                        class="schedule-class" :class="{ 'schedule-class--hidden': !classInfo.visible }">
+                        <p class="schedule-class-main">{{ classInfo.subject }}</p>
+                        <p v-if="classInfo.teacher" class="schedule-class-meta">{{ classInfo.teacher }}</p>
+                        <p v-if="classInfo.classroom" class="schedule-class-meta">Aula: {{ classInfo.classroom }}</p>
+                        <span v-if="!classInfo.visible" class="schedule-badge">No visible</span>
+                        <span v-if="showAbsences && classInfo.absentToday" class="schedule-badge">
+                          Profesor ausente hoy
+                        </span>
+                        <span v-if="showAbsences && classInfo.absentSimulated" class="schedule-badge">
+                          Ausencia simulada
+                        </span>
+                      </article>
+                    </div>
+                    <div v-else class="schedule-cell schedule-cell--empty">-</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    const { createApp } = Vue;
+    const { createClient } = supabase;
+
+    const SUPABASE_URL = "https://kbluhvorfldptbcnwvvx.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtibHVodm9yZmxkcHRiY253dnZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjMwNDIxNjIsImV4cCI6MjA3ODYxODE2Mn0.WUeTibJHnmVCsNqcwvzsUdFpsTn8BzjM-W7eZCRaZ7I";
+    const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const GROUPS_TABLE = "groups";
+
+    const SLOT_OPTIONS = [
+      { value: 1, label: "08:15-09:15" },
+      { value: 2, label: "09:15-10:15" },
+      { value: 3, label: "10:15-11:15" },
+      { value: 4, label: "11:15-11:45 (recreo)" },
+      { value: 5, label: "11:45-12:45" },
+      { value: 6, label: "12:45-13:45" },
+      { value: 7, label: "13:45-14:45" },
+      { value: 8, label: "15:00-16:00" },
+      { value: 9, label: "16:00-17:00" },
+      { value: 10, label: "17:00-18:00" },
+      { value: 11, label: "18:00-18:15 (recreo)" },
+      { value: 12, label: "18:15-19:15" },
+      { value: 13, label: "19:15-20:15" },
+      { value: 14, label: "20:15-21:15" }
+    ];
+
+    const WEEK_DAYS = [
+      { value: 1, label: "Lunes" },
+      { value: 2, label: "Martes" },
+      { value: 3, label: "Miércoles" },
+      { value: 4, label: "Jueves" },
+      { value: 5, label: "Viernes" }
+    ];
+
+    createApp({
+      data() {
+        return {
+          isLoggedIn: false,
+          userEmail: "",
+          loginForm: { email: "", password: "" },
+          loginMessage: "",
+          loginMessageType: "",
+          weekDays: WEEK_DAYS,
+          groups: [],
+          selectedGroup: "",
+          showAbsences: false,
+          loadingGroupSchedule: false,
+          groupScheduleMessage: "",
+          groupScheduleGrid: this.buildEmptyGroupScheduleGrid(),
+          absencesTodayByTeacher: new Map(),
+          groupTeachers: [],
+          simulatedAbsentTeachers: [],
+          rawGroupScheduleEntries: []
+        };
+      },
+      created() {
+        this.checkSession();
+        client.auth.onAuthStateChange((_event, session) => {
+          if (session && session.user) {
+            this.handleAuthenticated(session.user);
+          } else {
+            this.resetState();
+          }
+        });
+      },
+      watch: {
+        selectedGroup(newValue, oldValue) {
+          if (!newValue) {
+            this.groupScheduleGrid = this.buildEmptyGroupScheduleGrid();
+            this.groupScheduleMessage = "";
+            this.groupTeachers = [];
+            this.simulatedAbsentTeachers = [];
+            this.rawGroupScheduleEntries = [];
+            return;
+          }
+
+          if (newValue !== oldValue && this.isLoggedIn) {
+            this.simulatedAbsentTeachers = [];
+            this.loadGroupSchedule();
+          }
+        },
+        showAbsences(newValue, oldValue) {
+          if (!this.isLoggedIn || !this.selectedGroup || newValue === oldValue) {
+            return;
+          }
+          this.loadGroupSchedule();
+        },
+        simulatedAbsentTeachers() {
+          this.rebuildGroupScheduleFromRaw();
+        }
+      },
+      methods: {
+        buildEmptyGroupScheduleGrid() {
+          return SLOT_OPTIONS.map((slot) => ({
+            slotValue: slot.value,
+            slotLabel: slot.label,
+            days: WEEK_DAYS.map(() => [])
+          }));
+        },
+        async checkSession() {
+          const { data } = await client.auth.getSession();
+          const session = data && data.session;
+          if (session && session.user) {
+            this.handleAuthenticated(session.user);
+          }
+        },
+        handleAuthenticated(user) {
+          this.isLoggedIn = true;
+          this.userEmail = user.email;
+          this.loadGroups();
+        },
+        resetState() {
+          this.isLoggedIn = false;
+          this.userEmail = "";
+          this.loginForm.password = "";
+          this.groups = [];
+          this.selectedGroup = "";
+          this.loadingGroupSchedule = false;
+          this.groupScheduleMessage = "";
+          this.groupScheduleGrid = this.buildEmptyGroupScheduleGrid();
+          this.absencesTodayByTeacher = new Map();
+          this.groupTeachers = [];
+          this.simulatedAbsentTeachers = [];
+          this.rawGroupScheduleEntries = [];
+        },
+        async handleLogin() {
+          this.loginMessage = "";
+          this.loginMessageType = "";
+          try {
+            const { data, error } = await client.auth.signInWithPassword({
+              email: this.loginForm.email.trim(),
+              password: this.loginForm.password
+            });
+            if (error) throw error;
+            this.loginMessage = "Sesión iniciada correctamente.";
+            this.loginMessageType = "ok";
+            this.handleAuthenticated(data.user);
+          } catch (error) {
+            this.loginMessage = "Error al iniciar sesión: " + error.message;
+            this.loginMessageType = "error";
+          }
+        },
+        async handleLogout() {
+          await client.auth.signOut();
+          this.resetState();
+        },
+        async loadGroups() {
+          // Fuente principal: tabla dedicada de grupos.
+          const { data, error } = await client
+            .from(GROUPS_TABLE)
+            .select("*");
+
+          if (!error && data && data.length) {
+            const groupsFromTable = Array.from(
+              new Set(
+                data
+                  .map((row) => {
+                    const candidate = row.name || row.group_name || row.code || row.group || "";
+                    return String(candidate).trim();
+                  })
+                  .filter(Boolean)
+              )
+            ).sort((a, b) => a.localeCompare(b, "es"));
+            this.groups = groupsFromTable;
+            return;
+          }
+
+          // Fallback temporal si la tabla groups todavía no existe.
+          const { data: timetableData, error: timetableError } = await client
+            .from("timetable")
+            .select("group_name")
+            .not("group_name", "is", null)
+            .order("group_name", { ascending: true });
+
+          if (timetableError) {
+            this.groups = [];
+            this.groupScheduleMessage = "No se pudieron cargar los grupos.";
+            return;
+          }
+
+          this.groups = Array.from(
+            new Set(
+              (timetableData || [])
+                .map((row) => (row.group_name || "").trim())
+                .filter(Boolean)
+            )
+          );
+        },
+        parseWeekday(value) {
+          if (value === null || value === undefined) return null;
+
+          if (typeof value === "number" && Number.isFinite(value)) {
+            if (value >= 1 && value <= 7) return value;
+            if (value >= 0 && value <= 6) return value + 1;
+            return value;
+          }
+
+          if (typeof value === "string") {
+            const trimmed = value.trim().toLowerCase();
+            if (!trimmed) return null;
+
+            const letterMapping = { l: 1, m: 2, x: 3, j: 4, v: 5 };
+            if (letterMapping[trimmed]) return letterMapping[trimmed];
+
+            const numeric = Number(trimmed);
+            if (!Number.isNaN(numeric)) return this.parseWeekday(numeric);
+
+            const mapping = {
+              lunes: 1,
+              monday: 1,
+              martes: 2,
+              tuesday: 2,
+              miercoles: 3,
+              miércoles: 3,
+              wednesday: 3,
+              jueves: 4,
+              thursday: 4,
+              viernes: 5,
+              friday: 5
+            };
+            return mapping[trimmed] || null;
+          }
+
+          return null;
+        },
+        normalizeWeekdayValue(entry) {
+          const candidates = [
+            entry.weekday_letter,
+            entry.weekday,
+            entry.week_day,
+            entry.day_of_week,
+            entry.day,
+            entry.weekday_number,
+            entry.weekday_index
+          ];
+
+          for (const candidate of candidates) {
+            const normalized = this.parseWeekday(candidate);
+            if (normalized) return normalized;
+          }
+          return null;
+        },
+        normalizeSlotValue(entry) {
+          const candidates = [
+            entry.slot,
+            entry.slot_value,
+            entry.slot_number,
+            entry.tramo,
+            entry.hour_slot,
+            entry.start_slot
+          ];
+
+          for (const candidate of candidates) {
+            if (candidate === null || candidate === undefined) continue;
+            const parsed = Number(candidate);
+            if (!Number.isNaN(parsed)) return parsed;
+          }
+          return null;
+        },
+        isScheduleEntryVisible(entry) {
+          const candidates = [
+            entry.visible,
+            entry.is_visible,
+            entry.mostrar,
+            entry.show_in_panel,
+            entry.show
+          ];
+          const firstDefined = candidates.find((value) => value !== undefined && value !== null);
+          if (firstDefined === undefined) return true;
+          if (typeof firstDefined === "string") {
+            return firstDefined.toLowerCase() === "true" || firstDefined === "1";
+          }
+          return Boolean(firstDefined);
+        },
+        normalizeTimetableEntry(entry) {
+          return {
+            slotValue: this.normalizeSlotValue(entry),
+            weekdayValue: this.normalizeWeekdayValue(entry),
+            subject: entry.subject || entry.subject_name || entry.materia || entry.asignatura || "—",
+            teacher: entry.teacher_name || entry.teacher || "",
+            classroom: entry.classroom || entry.classroom_name || entry.room || entry.aula || "",
+            visible: this.isScheduleEntryVisible(entry),
+            absentToday: false,
+            absentSimulated: false
+          };
+        },
+        getTodayISO() {
+          const today = new Date();
+          const year = today.getFullYear();
+          const month = String(today.getMonth() + 1).padStart(2, "0");
+          const day = String(today.getDate()).padStart(2, "0");
+          return year + "-" + month + "-" + day;
+        },
+        async loadAbsencesTodayForTeachers(teacherNames = []) {
+          const todayISO = this.getTodayISO();
+          let query = client
+            .from("absences")
+            .select("teacher_name, start_slot, end_slot, date")
+            .eq("date", todayISO);
+
+          if (teacherNames.length) {
+            query = query.in("teacher_name", teacherNames);
+          }
+
+          const { data, error } = await query;
+
+          if (error) {
+            this.absencesTodayByTeacher = new Map();
+            return;
+          }
+
+          const grouped = new Map();
+          (data || []).forEach((row) => {
+            const teacherName = String(row.teacher_name || "").trim().toLowerCase();
+            if (!teacherName) return;
+            if (!grouped.has(teacherName)) grouped.set(teacherName, []);
+            grouped.get(teacherName).push({
+              startSlot: Number(row.start_slot),
+              endSlot: Number(row.end_slot)
+            });
+          });
+          this.absencesTodayByTeacher = grouped;
+        },
+        normalizeTeacherName(value) {
+          return String(value || "").trim().toLowerCase();
+        },
+        isTeacherSimulatedAbsent(teacherName) {
+          const normalizedTeacher = this.normalizeTeacherName(teacherName);
+          if (!normalizedTeacher) {
+            return false;
+          }
+
+          return this.simulatedAbsentTeachers.some(
+            (name) => this.normalizeTeacherName(name) === normalizedTeacher
+          );
+        },
+        clearSimulatedAbsences() {
+          this.simulatedAbsentTeachers = [];
+        },
+        isTeacherAbsentForSlotToday(teacherName, slotValue) {
+          const key = this.normalizeTeacherName(teacherName);
+          if (!key || !Number.isFinite(slotValue)) return false;
+          const ranges = this.absencesTodayByTeacher.get(key) || [];
+          return ranges.some((range) => {
+            if (!Number.isFinite(range.startSlot) || !Number.isFinite(range.endSlot)) return false;
+            return slotValue >= range.startSlot && slotValue <= range.endSlot;
+          });
+        },
+        isTeacherReallyAbsentToday(teacherName) {
+          const key = this.normalizeTeacherName(teacherName);
+          if (!key) return false;
+          const ranges = this.absencesTodayByTeacher.get(key) || [];
+          return ranges.length > 0;
+        },
+        mapEntriesToGroupSchedule(entries) {
+          const grid = this.buildEmptyGroupScheduleGrid();
+          const dayIndexByValue = new Map(this.weekDays.map((day, index) => [day.value, index]));
+          const slotIndexByValue = new Map(grid.map((row, index) => [row.slotValue, index]));
+
+          const normalizedEntries = (entries || []).map((entry) => this.normalizeTimetableEntry(entry));
+
+          normalizedEntries.sort((a, b) => {
+            const dayA = a.weekdayValue || 99;
+            const dayB = b.weekdayValue || 99;
+            if (dayA === dayB) return (a.slotValue || 0) - (b.slotValue || 0);
+            return dayA - dayB;
+          });
+
+          normalizedEntries.forEach((entry) => {
+            if (!Number.isFinite(entry.slotValue) || !dayIndexByValue.has(entry.weekdayValue)) return;
+            entry.absentToday = this.showAbsences
+              ? this.isTeacherAbsentForSlotToday(entry.teacher, entry.slotValue)
+              : false;
+            entry.absentSimulated = this.showAbsences
+              ? this.isTeacherSimulatedAbsent(entry.teacher) && !entry.absentToday
+              : false;
+            const slotIndex = slotIndexByValue.get(entry.slotValue);
+            if (slotIndex === undefined) return;
+            const dayIndex = dayIndexByValue.get(entry.weekdayValue);
+            grid[slotIndex].days[dayIndex].push(entry);
+          });
+
+          return grid;
+        },
+        rebuildGroupScheduleFromRaw() {
+          this.groupScheduleGrid = this.mapEntriesToGroupSchedule(this.rawGroupScheduleEntries);
+        },
+        async loadGroupSchedule() {
+          if (!this.selectedGroup) {
+            this.groupScheduleGrid = this.buildEmptyGroupScheduleGrid();
+            this.groupScheduleMessage = "Selecciona un grupo para ver su horario.";
+            return;
+          }
+
+          this.loadingGroupSchedule = true;
+          this.groupScheduleMessage = "";
+
+          const { data, error } = await client
+            .from("timetable")
+            .select("*")
+            .eq("group_name", this.selectedGroup);
+
+          if (error) {
+            this.groupScheduleMessage = "No se pudo cargar el horario. Inténtalo de nuevo.";
+            this.groupScheduleGrid = this.buildEmptyGroupScheduleGrid();
+            this.loadingGroupSchedule = false;
+            return;
+          }
+
+          if (!data || !data.length) {
+            this.groupScheduleMessage = "No hay clases registradas para este grupo.";
+            this.groupScheduleGrid = this.buildEmptyGroupScheduleGrid();
+            this.groupTeachers = [];
+            this.rawGroupScheduleEntries = [];
+            this.loadingGroupSchedule = false;
+            return;
+          }
+
+          this.rawGroupScheduleEntries = data || [];
+          this.groupTeachers = Array.from(
+            new Set(
+              (data || [])
+                .map((entry) => entry.teacher_name || entry.teacher || "")
+                .map((name) => String(name).trim())
+                .filter(Boolean)
+            )
+          ).sort((a, b) => a.localeCompare(b, "es"));
+
+          if (this.showAbsences) {
+            await this.loadAbsencesTodayForTeachers(this.groupTeachers);
+            this.simulatedAbsentTeachers = this.simulatedAbsentTeachers.filter(
+              (teacherName) => !this.isTeacherReallyAbsentToday(teacherName)
+            );
+          } else {
+            this.absencesTodayByTeacher = new Map();
+          }
+
+          this.rebuildGroupScheduleFromRaw();
+          this.loadingGroupSchedule = false;
+        }
+      }
+    }).mount("#app");
+  </script>
+</body>
+
+</html>
