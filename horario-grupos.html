@@ -72,6 +72,10 @@
               </select>
             </label>
             <label>
+              Semana
+              <input type="week" v-model="selectedWeek" />
+            </label>
+            <label>
               <input type="checkbox" v-model="showAbsences" />
               Mostrar ausencias
             </label>
@@ -84,6 +88,9 @@
 
         <details v-if="showAbsences && selectedGroup" class="group-absence-simulator" open>
           <summary>Simular ausencias adicionales del grupo</summary>
+          <p class="absence-meta" v-if="getSelectedWeekLabel()">
+            Semana seleccionada: {{ getSelectedWeekLabel() }}
+          </p>
           <p class="absence-meta">
             Marca profesorado para simular su ausencia en esta vista. No se guardan cambios en la base de datos.
           </p>
@@ -92,10 +99,10 @@
           </p>
           <div v-else class="simulated-absence-list">
             <label v-for="teacher in groupTeachers" :key="`simulate-${teacher}`" class="simulated-absence-item">
-              <input v-if="isTeacherReallyAbsentToday(teacher)" type="checkbox" checked disabled />
+              <input v-if="isTeacherReallyAbsentInSelectedWeek(teacher)" type="checkbox" checked disabled />
               <input v-else type="checkbox" :value="teacher" v-model="simulatedAbsentTeachers" />
               {{ teacher }}
-              <span v-if="isTeacherReallyAbsentToday(teacher)" class="schedule-badge">Ausente hoy</span>
+              <span v-if="isTeacherReallyAbsentInSelectedWeek(teacher)" class="schedule-badge">Ausente en semana</span>
             </label>
           </div>
           <button type="button" class="btn-secondary" @click="clearSimulatedAbsences"
@@ -113,7 +120,9 @@
               <thead>
                 <tr>
                   <th>Franja</th>
-                  <th v-for="day in weekDays" :key="`day-${day.value}`">{{ day.label }}</th>
+                  <th v-for="day in weekDays" :key="`day-${day.value}`">
+                    {{ day.label }} ({{ getSelectedWeekdayShortDate(day.value) }})
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -128,7 +137,7 @@
                         <p v-if="classInfo.classroom" class="schedule-class-meta">Aula: {{ classInfo.classroom }}</p>
                         <span v-if="!classInfo.visible" class="schedule-badge">No visible</span>
                         <span v-if="showAbsences && classInfo.absentToday" class="schedule-badge">
-                          Profesor ausente hoy
+                          Profesor ausente
                         </span>
                         <span v-if="showAbsences && classInfo.absentSimulated" class="schedule-badge">
                           Ausencia simulada
@@ -182,6 +191,47 @@
       { value: 5, label: "Viernes" }
     ];
 
+    function toISODate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return year + "-" + month + "-" + day;
+    }
+
+    function getCurrentISOWeekValue() {
+      const now = new Date();
+      const utcDate = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+      const dayNum = utcDate.getUTCDay() || 7;
+      utcDate.setUTCDate(utcDate.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(utcDate.getUTCFullYear(), 0, 1));
+      const weekNo = Math.ceil((((utcDate - yearStart) / 86400000) + 1) / 7);
+      return utcDate.getUTCFullYear() + "-W" + String(weekNo).padStart(2, "0");
+    }
+
+    function getISOWeekStartDate(isoWeekValue) {
+      const match = /^(\d{4})-W(\d{2})$/.exec(String(isoWeekValue || ""));
+      if (!match) return null;
+      const year = Number(match[1]);
+      const week = Number(match[2]);
+      if (!Number.isFinite(year) || !Number.isFinite(week) || week < 1 || week > 53) {
+        return null;
+      }
+
+      const jan4 = new Date(year, 0, 4);
+      const dayOfWeek = jan4.getDay() || 7;
+      const mondayWeek1 = new Date(year, 0, 4 - (dayOfWeek - 1));
+      mondayWeek1.setHours(0, 0, 0, 0);
+      const targetMonday = new Date(mondayWeek1);
+      targetMonday.setDate(mondayWeek1.getDate() + (week - 1) * 7);
+      return targetMonday;
+    }
+
+    function formatDateDDMM(isoDate) {
+      const parts = String(isoDate || "").split("-");
+      if (parts.length !== 3) return "";
+      return parts[2] + "/" + parts[1];
+    }
+
     createApp({
       data() {
         return {
@@ -193,11 +243,12 @@
           weekDays: WEEK_DAYS,
           groups: [],
           selectedGroup: "",
+          selectedWeek: getCurrentISOWeekValue(),
           showAbsences: false,
           loadingGroupSchedule: false,
           groupScheduleMessage: "",
           groupScheduleGrid: this.buildEmptyGroupScheduleGrid(),
-          absencesTodayByTeacher: new Map(),
+          absencesByTeacherAndDate: new Map(),
           groupTeachers: [],
           simulatedAbsentTeachers: [],
           rawGroupScheduleEntries: []
@@ -235,6 +286,16 @@
           }
           this.loadGroupSchedule();
         },
+        selectedWeek(newValue, oldValue) {
+          if (!this.isLoggedIn || !this.selectedGroup || newValue === oldValue) {
+            return;
+          }
+          if (!this.showAbsences) {
+            this.rebuildGroupScheduleFromRaw();
+            return;
+          }
+          this.loadGroupSchedule();
+        },
         simulatedAbsentTeachers() {
           this.rebuildGroupScheduleFromRaw();
         }
@@ -268,7 +329,8 @@
           this.loadingGroupSchedule = false;
           this.groupScheduleMessage = "";
           this.groupScheduleGrid = this.buildEmptyGroupScheduleGrid();
-          this.absencesTodayByTeacher = new Map();
+          this.selectedWeek = getCurrentISOWeekValue();
+          this.absencesByTeacherAndDate = new Map();
           this.groupTeachers = [];
           this.simulatedAbsentTeachers = [];
           this.rawGroupScheduleEntries = [];
@@ -434,19 +496,44 @@
             absentSimulated: false
           };
         },
-        getTodayISO() {
-          const today = new Date();
-          const year = today.getFullYear();
-          const month = String(today.getMonth() + 1).padStart(2, "0");
-          const day = String(today.getDate()).padStart(2, "0");
-          return year + "-" + month + "-" + day;
+        getSelectedWeekDateISOByWeekday(weekdayValue) {
+          const weekStart = getISOWeekStartDate(this.selectedWeek);
+          if (!weekStart || !Number.isFinite(weekdayValue) || weekdayValue < 1 || weekdayValue > 7) {
+            return null;
+          }
+          const date = new Date(weekStart);
+          date.setDate(weekStart.getDate() + (weekdayValue - 1));
+          return toISODate(date);
         },
-        async loadAbsencesTodayForTeachers(teacherNames = []) {
-          const todayISO = this.getTodayISO();
+        getSelectedWeekLabel() {
+          const weekStart = getISOWeekStartDate(this.selectedWeek);
+          if (!weekStart) return "";
+          const monday = toISODate(weekStart);
+          const sundayDate = new Date(weekStart);
+          sundayDate.setDate(weekStart.getDate() + 6);
+          const sunday = toISODate(sundayDate);
+          return formatDateDDMM(monday) + " - " + formatDateDDMM(sunday);
+        },
+        getSelectedWeekdayShortDate(weekdayValue) {
+          const isoDate = this.getSelectedWeekDateISOByWeekday(weekdayValue);
+          return formatDateDDMM(isoDate);
+        },
+        async loadAbsencesForSelectedWeekForTeachers(teacherNames = []) {
+          const weekStart = getISOWeekStartDate(this.selectedWeek);
+          if (!weekStart) {
+            this.absencesByTeacherAndDate = new Map();
+            return;
+          }
+          const mondayISO = toISODate(weekStart);
+          const sundayDate = new Date(weekStart);
+          sundayDate.setDate(weekStart.getDate() + 6);
+          const sundayISO = toISODate(sundayDate);
+
           let query = client
             .from("absences")
             .select("teacher_name, start_slot, end_slot, date")
-            .eq("date", todayISO);
+            .gte("date", mondayISO)
+            .lte("date", sundayISO);
 
           if (teacherNames.length) {
             query = query.in("teacher_name", teacherNames);
@@ -455,21 +542,24 @@
           const { data, error } = await query;
 
           if (error) {
-            this.absencesTodayByTeacher = new Map();
+            this.absencesByTeacherAndDate = new Map();
             return;
           }
 
           const grouped = new Map();
           (data || []).forEach((row) => {
             const teacherName = String(row.teacher_name || "").trim().toLowerCase();
-            if (!teacherName) return;
-            if (!grouped.has(teacherName)) grouped.set(teacherName, []);
-            grouped.get(teacherName).push({
+            const absenceDate = String(row.date || "");
+            if (!teacherName || !absenceDate) return;
+            if (!grouped.has(teacherName)) grouped.set(teacherName, new Map());
+            const byDate = grouped.get(teacherName);
+            if (!byDate.has(absenceDate)) byDate.set(absenceDate, []);
+            byDate.get(absenceDate).push({
               startSlot: Number(row.start_slot),
               endSlot: Number(row.end_slot)
             });
           });
-          this.absencesTodayByTeacher = grouped;
+          this.absencesByTeacherAndDate = grouped;
         },
         normalizeTeacherName(value) {
           return String(value || "").trim().toLowerCase();
@@ -487,20 +577,26 @@
         clearSimulatedAbsences() {
           this.simulatedAbsentTeachers = [];
         },
-        isTeacherAbsentForSlotToday(teacherName, slotValue) {
+        isTeacherAbsentForSlotInSelectedWeek(teacherName, weekdayValue, slotValue) {
+          const absenceDate = this.getSelectedWeekDateISOByWeekday(weekdayValue);
           const key = this.normalizeTeacherName(teacherName);
-          if (!key || !Number.isFinite(slotValue)) return false;
-          const ranges = this.absencesTodayByTeacher.get(key) || [];
+          if (!key || !absenceDate || !Number.isFinite(slotValue)) return false;
+          const teacherAbsences = this.absencesByTeacherAndDate.get(key);
+          const ranges = teacherAbsences ? (teacherAbsences.get(absenceDate) || []) : [];
           return ranges.some((range) => {
             if (!Number.isFinite(range.startSlot) || !Number.isFinite(range.endSlot)) return false;
             return slotValue >= range.startSlot && slotValue <= range.endSlot;
           });
         },
-        isTeacherReallyAbsentToday(teacherName) {
+        isTeacherReallyAbsentInSelectedWeek(teacherName) {
           const key = this.normalizeTeacherName(teacherName);
           if (!key) return false;
-          const ranges = this.absencesTodayByTeacher.get(key) || [];
-          return ranges.length > 0;
+          const teacherAbsences = this.absencesByTeacherAndDate.get(key);
+          if (!teacherAbsences) return false;
+          for (const ranges of teacherAbsences.values()) {
+            if (ranges && ranges.length) return true;
+          }
+          return false;
         },
         mapEntriesToGroupSchedule(entries) {
           const grid = this.buildEmptyGroupScheduleGrid();
@@ -519,7 +615,7 @@
           normalizedEntries.forEach((entry) => {
             if (!Number.isFinite(entry.slotValue) || !dayIndexByValue.has(entry.weekdayValue)) return;
             entry.absentToday = this.showAbsences
-              ? this.isTeacherAbsentForSlotToday(entry.teacher, entry.slotValue)
+              ? this.isTeacherAbsentForSlotInSelectedWeek(entry.teacher, entry.weekdayValue, entry.slotValue)
               : false;
             entry.absentSimulated = this.showAbsences
               ? this.isTeacherSimulatedAbsent(entry.teacher) && !entry.absentToday
@@ -577,12 +673,12 @@
           ).sort((a, b) => a.localeCompare(b, "es"));
 
           if (this.showAbsences) {
-            await this.loadAbsencesTodayForTeachers(this.groupTeachers);
+            await this.loadAbsencesForSelectedWeekForTeachers(this.groupTeachers);
             this.simulatedAbsentTeachers = this.simulatedAbsentTeachers.filter(
-              (teacherName) => !this.isTeacherReallyAbsentToday(teacherName)
+              (teacherName) => !this.isTeacherReallyAbsentInSelectedWeek(teacherName)
             );
           } else {
-            this.absencesTodayByTeacher = new Map();
+            this.absencesByTeacherAndDate = new Map();
           }
 
           this.rebuildGroupScheduleFromRaw();
