@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Gestión de ausencias - IES Polígono Sur</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="flatpickr.min.css" />
   <link rel="apple-touch-icon" sizes="180x180" href="img/apple-touch-icon.png" />
   <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png" />
   <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png" />
@@ -73,7 +74,7 @@
             </label>
             <label>
               Semana
-              <input type="week" v-model="selectedWeek" />
+              <input ref="weekPickerInput" type="text" v-model="selectedWeek" autocomplete="off" />
             </label>
             <label>
               <input type="checkbox" v-model="showAbsences" />
@@ -99,8 +100,8 @@
           </p>
           <div v-else class="simulated-absence-list">
             <label v-for="teacher in groupTeachers" :key="`simulate-${teacher}`" class="simulated-absence-item">
-              <input v-if="isTeacherReallyAbsentInSelectedWeek(teacher)" type="checkbox" checked disabled />
-              <input v-else type="checkbox" :value="teacher" v-model="simulatedAbsentTeachers" />
+              <input type="checkbox" :checked="isTeacherCheckedInSimulator(teacher)"
+                @change="toggleTeacherAbsenceSelection(teacher, $event.target.checked)" />
               {{ teacher }}
               <span v-if="isTeacherReallyAbsentInSelectedWeek(teacher)" class="schedule-badge">Ausente en semana</span>
             </label>
@@ -157,6 +158,7 @@
 
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="flatpickr.js"></script>
   <script>
     const { createApp } = Vue;
     const { createClient } = supabase;
@@ -209,7 +211,7 @@
     }
 
     function getISOWeekStartDate(isoWeekValue) {
-      const match = /^(\d{4})-W(\d{2})$/.exec(String(isoWeekValue || ""));
+      const match = /^(\d{4})-W(\d{1,2})$/i.exec(String(isoWeekValue || "").trim());
       if (!match) return null;
       const year = Number(match[1]);
       const week = Number(match[2]);
@@ -224,6 +226,29 @@
       const targetMonday = new Date(mondayWeek1);
       targetMonday.setDate(mondayWeek1.getDate() + (week - 1) * 7);
       return targetMonday;
+    }
+
+    function normalizeISOWeekValue(isoWeekValue) {
+      const match = /^(\d{4})-W(\d{1,2})$/i.exec(String(isoWeekValue || "").trim());
+      if (!match) return "";
+      const year = Number(match[1]);
+      const week = Number(match[2]);
+      if (!Number.isFinite(year) || !Number.isFinite(week) || week < 1 || week > 53) {
+        return "";
+      }
+      return year + "-W" + String(week).padStart(2, "0");
+    }
+
+    function getISOWeekValueFromDate(date) {
+      if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+        return getCurrentISOWeekValue();
+      }
+      const utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      const dayNum = utcDate.getUTCDay() || 7;
+      utcDate.setUTCDate(utcDate.getUTCDate() + 4 - dayNum);
+      const yearStart = new Date(Date.UTC(utcDate.getUTCFullYear(), 0, 1));
+      const weekNo = Math.ceil((((utcDate - yearStart) / 86400000) + 1) / 7);
+      return utcDate.getUTCFullYear() + "-W" + String(weekNo).padStart(2, "0");
     }
 
     function formatDateDDMM(isoDate) {
@@ -248,9 +273,11 @@
           loadingGroupSchedule: false,
           groupScheduleMessage: "",
           groupScheduleGrid: this.buildEmptyGroupScheduleGrid(),
+          weekPickerInstance: null,
           absencesByTeacherAndDate: new Map(),
           groupTeachers: [],
           simulatedAbsentTeachers: [],
+          ignoredRealAbsentTeachers: [],
           rawGroupScheduleEntries: []
         };
       },
@@ -264,6 +291,12 @@
           }
         });
       },
+      mounted() {
+        this.ensureWeekPicker();
+      },
+      beforeUnmount() {
+        this.destroyWeekPicker();
+      },
       watch: {
         selectedGroup(newValue, oldValue) {
           if (!newValue) {
@@ -271,6 +304,7 @@
             this.groupScheduleMessage = "";
             this.groupTeachers = [];
             this.simulatedAbsentTeachers = [];
+            this.ignoredRealAbsentTeachers = [];
             this.rawGroupScheduleEntries = [];
             return;
           }
@@ -287,6 +321,12 @@
           this.loadGroupSchedule();
         },
         selectedWeek(newValue, oldValue) {
+          const normalizedWeek = normalizeISOWeekValue(newValue);
+          if (normalizedWeek && normalizedWeek !== newValue) {
+            this.selectedWeek = normalizedWeek;
+            return;
+          }
+          this.syncWeekPickerFromSelectedWeek(newValue);
           if (!this.isLoggedIn || !this.selectedGroup || newValue === oldValue) {
             return;
           }
@@ -319,6 +359,7 @@
           this.isLoggedIn = true;
           this.userEmail = user.email;
           this.loadGroups();
+          this.$nextTick(() => this.ensureWeekPicker());
         },
         resetState() {
           this.isLoggedIn = false;
@@ -333,7 +374,43 @@
           this.absencesByTeacherAndDate = new Map();
           this.groupTeachers = [];
           this.simulatedAbsentTeachers = [];
+          this.ignoredRealAbsentTeachers = [];
           this.rawGroupScheduleEntries = [];
+          this.destroyWeekPicker();
+          this.$nextTick(() => this.ensureWeekPicker());
+        },
+        ensureWeekPicker() {
+          const input = this.$refs.weekPickerInput;
+          if (!input || typeof flatpickr !== "function") return;
+
+          this.destroyWeekPicker();
+          const defaultDate = getISOWeekStartDate(this.selectedWeek) || new Date();
+          this.weekPickerInstance = flatpickr(input, {
+            dateFormat: "Y-\\WW",
+            altInput: true,
+            altFormat: "\\S\\e\\m\\a\\n\\a W, Y",
+            defaultDate,
+            weekNumbers: true,
+            onChange: (selectedDates) => {
+              if (!selectedDates || !selectedDates.length) return;
+              const nextWeek = getISOWeekValueFromDate(selectedDates[0]);
+              if (nextWeek !== this.selectedWeek) {
+                this.selectedWeek = nextWeek;
+              }
+            }
+          });
+        },
+        destroyWeekPicker() {
+          if (this.weekPickerInstance && typeof this.weekPickerInstance.destroy === "function") {
+            this.weekPickerInstance.destroy();
+          }
+          this.weekPickerInstance = null;
+        },
+        syncWeekPickerFromSelectedWeek(isoWeekValue) {
+          if (!this.weekPickerInstance) return;
+          const monday = getISOWeekStartDate(isoWeekValue);
+          if (!monday) return;
+          this.weekPickerInstance.setDate(monday, false);
         },
         async handleLogin() {
           this.loginMessage = "";
@@ -577,10 +654,50 @@
         clearSimulatedAbsences() {
           this.simulatedAbsentTeachers = [];
         },
+        isTeacherRealAbsenceIgnored(teacherName) {
+          const normalizedTeacher = this.normalizeTeacherName(teacherName);
+          if (!normalizedTeacher) return false;
+          return this.ignoredRealAbsentTeachers.some(
+            (name) => this.normalizeTeacherName(name) === normalizedTeacher
+          );
+        },
+        isTeacherCheckedInSimulator(teacherName) {
+          if (this.isTeacherReallyAbsentInSelectedWeek(teacherName)) {
+            return !this.isTeacherRealAbsenceIgnored(teacherName);
+          }
+          return this.isTeacherSimulatedAbsent(teacherName);
+        },
+        toggleTeacherAbsenceSelection(teacherName, checked) {
+          const normalizedTeacher = this.normalizeTeacherName(teacherName);
+          if (!normalizedTeacher) return;
+
+          if (this.isTeacherReallyAbsentInSelectedWeek(teacherName)) {
+            if (checked) {
+              this.ignoredRealAbsentTeachers = this.ignoredRealAbsentTeachers.filter(
+                (name) => this.normalizeTeacherName(name) !== normalizedTeacher
+              );
+            } else if (!this.isTeacherRealAbsenceIgnored(teacherName)) {
+              this.ignoredRealAbsentTeachers = [...this.ignoredRealAbsentTeachers, teacherName];
+            }
+            this.rebuildGroupScheduleFromRaw();
+            return;
+          }
+
+          if (checked) {
+            if (!this.isTeacherSimulatedAbsent(teacherName)) {
+              this.simulatedAbsentTeachers = [...this.simulatedAbsentTeachers, teacherName];
+            }
+          } else {
+            this.simulatedAbsentTeachers = this.simulatedAbsentTeachers.filter(
+              (name) => this.normalizeTeacherName(name) !== normalizedTeacher
+            );
+          }
+        },
         isTeacherAbsentForSlotInSelectedWeek(teacherName, weekdayValue, slotValue) {
           const absenceDate = this.getSelectedWeekDateISOByWeekday(weekdayValue);
           const key = this.normalizeTeacherName(teacherName);
           if (!key || !absenceDate || !Number.isFinite(slotValue)) return false;
+          if (this.isTeacherRealAbsenceIgnored(teacherName)) return false;
           const teacherAbsences = this.absencesByTeacherAndDate.get(key);
           const ranges = teacherAbsences ? (teacherAbsences.get(absenceDate) || []) : [];
           return ranges.some((range) => {
@@ -677,8 +794,12 @@
             this.simulatedAbsentTeachers = this.simulatedAbsentTeachers.filter(
               (teacherName) => !this.isTeacherReallyAbsentInSelectedWeek(teacherName)
             );
+            this.ignoredRealAbsentTeachers = this.ignoredRealAbsentTeachers.filter(
+              (teacherName) => this.isTeacherReallyAbsentInSelectedWeek(teacherName)
+            );
           } else {
             this.absencesByTeacherAndDate = new Map();
+            this.ignoredRealAbsentTeachers = [];
           }
 
           this.rebuildGroupScheduleFromRaw();
