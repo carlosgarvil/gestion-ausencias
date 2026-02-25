@@ -60,7 +60,7 @@
       <section id="panel-section">
         <div class="panel-header">
           <h2>Panel del centro <button id="btn-print" onclick="window.print()">
-               Imprimir / PDF
+              Imprimir / PDF
             </button></h2>
           <div class="panel-controls">
             <label>
@@ -78,6 +78,7 @@
             <thead>
               <tr>
                 <th>Franja horaria</th>
+                <th>Profesorado de guardia</th>
                 <th>Grupo</th>
                 <th>Materia</th>
                 <th>Aula</th>
@@ -87,6 +88,7 @@
             <tbody>
               <tr v-for="(row, index) in panelRows" :key="row.key || `${row.teacher}-${index}-${row.slotValue}`">
                 <td v-if="row.showSlotLabel" :rowspan="row.slotRowSpan">{{ row.slotLabel }}</td>
+                <td v-if="row.showSlotLabel" :rowspan="row.slotRowSpan" v-html="row.guardTeachers.join('<br>')"></td>
                 <td>{{ row.group }}</td>
                 <td>{{ row.subject }}</td>
                 <td>{{ row.classroom }}</td>
@@ -105,7 +107,3 @@
 </body>
 
 </html>
-
-
-
-

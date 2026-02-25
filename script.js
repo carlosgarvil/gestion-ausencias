@@ -442,7 +442,52 @@ createApp({
         return;
       }
 
-      this.panelRows = this.mapClassesToPanelRows(data || []);
+      // Obtener día de la semana de panelDate (1=Lunes ... 5=Viernes)
+      const dateObj = new Date(`${this.panelDate}T00:00:00`);
+      const jsDay = dateObj.getDay(); // 0=Dom, 1=Lun ... 6=Sab
+      const weekday = jsDay === 0 ? 7 : jsDay; // Convertir a 1=Lun ... 7=Dom
+      console.log("Panel weekday:", weekday, "for date:", this.panelDate);
+
+      // Consultar profesorado de guardia desde timetable
+      let guardEntries = [];
+      const { data: guardData, error: guardError } = await client
+        .from("timetable")
+        .select("*")
+        .ilike("subject", "Guardia%");
+
+      console.log("Guard query result:", guardData, "error:", guardError);
+
+      if (guardError) {
+        console.error("Error cargando guardias:", guardError);
+      } else {
+        console.log("Guard data count:", (guardData || []).length);
+        if (guardData && guardData.length > 0) {
+          console.log("Sample guard entry:", guardData[0]);
+          console.log("All guard teacher_names:", guardData.map(e => e.teacher_name));
+        }
+        // Filtrar por día de la semana
+        guardEntries = (guardData || []).filter((entry) => {
+          const entryWeekday = this.normalizeWeekdayValue(entry);
+          console.log("Guard entry weekday:", entryWeekday, "expected:", weekday, "teacher:", entry.teacher_name);
+          return entryWeekday === weekday;
+        });
+        console.log("Filtered guard entries:", guardEntries.length);
+      }
+
+      // Consultar ausencias del día para cruzar con guardias
+      let absentTeachers = [];
+      const { data: absData, error: absError } = await client
+        .from("absences")
+        .select("teacher_name, start_slot, end_slot")
+        .eq("date", this.panelDate);
+
+      if (absError) {
+        console.error("Error cargando ausencias para guardias:", absError);
+      } else {
+        absentTeachers = absData || [];
+      }
+
+      this.panelRows = this.mapClassesToPanelRows(data || [], guardEntries, absentTeachers);
       if (!this.panelRows.length) {
         this.panelMessage = "No hay clases pendientes de cubrir para este día.";
       }
@@ -563,7 +608,7 @@ createApp({
       const slot = this.slotOptions.find((option) => option.value === slotNumber);
       return slot ? slot.label : `Tramo ${slotValue}`;
     },
-    mapClassesToPanelRows(entries = []) {
+    mapClassesToPanelRows(entries = [], guardEntries = [], absentTeachers = []) {
       const rows = [];
       entries.forEach((entry) => {
         const group =
@@ -607,6 +652,49 @@ createApp({
           classroom,
           teacher
         });
+      });
+
+      // Función para comprobar si un profesor está ausente en un slot
+      const isTeacherAbsent = (teacherName, slot) => {
+        return absentTeachers.some((abs) => {
+          if (abs.teacher_name !== teacherName) return false;
+          const start = Number(abs.start_slot);
+          const end = Number(abs.end_slot);
+          if (Number.isFinite(start) && Number.isFinite(end)) {
+            return slot >= start && slot <= end;
+          }
+          return true;
+        });
+      };
+
+      // Agrupar profesorado de guardia por slot
+      const guardBySlot = new Map();
+      guardEntries.forEach((entry) => {
+        const slotValue = this.normalizeSlotValue(entry);
+        if (!Number.isFinite(slotValue)) return;
+        if (!guardBySlot.has(slotValue)) {
+          guardBySlot.set(slotValue, []);
+        }
+        const teacherName = entry.teacher_name || entry.teacher || "";
+        const subject = entry.subject || entry.subject_name || "";
+        if (teacherName) {
+          // Determinar clase CSS según tipo de guardia
+          let guardClass = "guard-default";
+          const subjectLower = subject.toLowerCase();
+          if (subjectLower.includes("biblioteca")) {
+            guardClass = "guard-biblioteca";
+          } else if (subjectLower.includes("alegría") || subjectLower.includes("alegria")) {
+            guardClass = "guard-alegria";
+          } else if (subjectLower.includes("bulería") || subjectLower.includes("buleria")) {
+            guardClass = "guard-buleria";
+          }
+          // Comprobar si el profesor está ausente en este slot
+          const absent = isTeacherAbsent(teacherName, slotValue);
+          const absentClass = absent ? " guard-absent" : "";
+          const displayText = subject ? `${teacherName} (${subject})` : teacherName;
+          const displayHtml = `<span class="${guardClass}${absentClass}">${displayText}</span>`;
+          guardBySlot.get(slotValue).push(displayHtml);
+        }
       });
 
       const normalizedRows = rows.sort((a, b) => {
@@ -661,6 +749,11 @@ createApp({
           a.teacher.localeCompare(b.teacher)
         );
 
+        // Obtener profesorado de guardia para este slot
+        const guardTeachers = guardBySlot.has(slotEntry.slotValue)
+          ? guardBySlot.get(slotEntry.slotValue)
+          : [];
+
         teacherRows.forEach((teacherRow, index) => {
           groupedRows.push({
             key: `${slotEntry.slotValue ?? slotEntry.slotLabel}-${teacherRow.teacher}-${index}`,
@@ -671,7 +764,8 @@ createApp({
             group: Array.from(teacherRow.groups).join(", "),
             subject: Array.from(teacherRow.subjects).join(", "),
             classroom: Array.from(teacherRow.classrooms).join(", "),
-            teacher: teacherRow.teacher
+            teacher: teacherRow.teacher,
+            guardTeachers: guardTeachers
           });
         });
       });
