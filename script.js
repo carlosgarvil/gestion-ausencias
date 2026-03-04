@@ -669,6 +669,14 @@ createApp({
 
       // Agrupar profesorado de guardia por slot
       const guardBySlot = new Map();
+      const getGuardOrder = (subjectText) => {
+        const normalized = (subjectText || "").toLowerCase();
+        if (normalized.includes("alegría") || normalized.includes("alegria")) return 0;
+        if (normalized.includes("bulería") || normalized.includes("buleria")) return 1;
+        if (normalized.includes("biblioteca")) return 2;
+        return 3;
+      };
+
       guardEntries.forEach((entry) => {
         const slotValue = this.normalizeSlotValue(entry);
         if (!Number.isFinite(slotValue)) return;
@@ -693,8 +701,25 @@ createApp({
           const absentClass = absent ? " guard-absent" : "";
           const displayText = subject ? `${teacherName} (${subject})` : teacherName;
           const displayHtml = `<span class="${guardClass}${absentClass}">${displayText}</span>`;
-          guardBySlot.get(slotValue).push(displayHtml);
+          guardBySlot.get(slotValue).push({
+            teacherName,
+            displayHtml,
+            guardOrder: getGuardOrder(subject)
+          });
         }
+      });
+
+      guardBySlot.forEach((guards, slotValue) => {
+        const sortedGuards = guards
+          .slice()
+          .sort((a, b) => {
+            if (a.guardOrder !== b.guardOrder) {
+              return a.guardOrder - b.guardOrder;
+            }
+            return a.teacherName.localeCompare(b.teacherName, "es");
+          })
+          .map((guard) => guard.displayHtml);
+        guardBySlot.set(slotValue, sortedGuards);
       });
 
       const normalizedRows = rows.sort((a, b) => {
@@ -1440,6 +1465,22 @@ createApp({
         day: "2-digit",
         month: "2-digit"
       });
+    },
+    isPastUnjustifiedAbsence(absence) {
+      if (!absence?.date) return false;
+
+      const status = String(absence.status || "").trim().toLowerCase();
+      if (status === "justificado") {
+        return false;
+      }
+
+      const absenceDate = parseISODate(absence.date) || new Date(absence.date);
+      if (!absenceDate || Number.isNaN(absenceDate.getTime())) {
+        return false;
+      }
+
+      const today = parseISODate(getTodayISO());
+      return Boolean(today) && absenceDate < today;
     },
     truncateReason(reason, maxLength = 50) {
       if (!reason) return "";

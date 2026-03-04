@@ -556,6 +556,11 @@ button:active {
   background: #f5f5f5;
 }
 
+.overdue-unjustified-date {
+  color: #c62828;
+  font-weight: 600;
+}
+
 .month-picker input[type="month"] {
   min-width: 12rem;
 }

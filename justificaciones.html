@@ -89,7 +89,9 @@
             <tbody>
               <tr v-for="justification in filteredJustifications" :key="justification.id">
                 <td>{{ justification.teacher_name }}</td>
-                <td>{{ formatDateForDisplay(justification.date) }}</td>
+                <td :class="{ 'overdue-unjustified-date': isPastUnjustifiedAbsence(justification) }">
+                  {{ formatDateForDisplay(justification.date) }}
+                </td>
                 <td>{{ getSlotLabel(justification.start_slot) }}</td>
                 <td>{{ getSlotLabel(justification.end_slot) }}</td>
                 <td>{{ truncateReason(justification.reason) }}</td>
