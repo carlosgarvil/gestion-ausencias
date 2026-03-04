@@ -561,8 +561,17 @@ button:active {
   font-weight: 600;
 }
 
-.month-picker input[type="month"] {
-  min-width: 12rem;
+.month-picker .month-picker-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.month-picker .month-picker-controls select {
+  min-width: 9rem;
+}
+
+.month-picker .month-picker-controls select:last-child {
+  min-width: 6rem;
 }
 
 .status-select {

@@ -44,6 +44,21 @@ const JUSTIFICATION_STATUS_OPTIONS = [
   { value: "Aviso", label: "Aviso" }
 ];
 
+const MONTH_OPTIONS = [
+  { value: "01", label: "Enero" },
+  { value: "02", label: "Febrero" },
+  { value: "03", label: "Marzo" },
+  { value: "04", label: "Abril" },
+  { value: "05", label: "Mayo" },
+  { value: "06", label: "Junio" },
+  { value: "07", label: "Julio" },
+  { value: "08", label: "Agosto" },
+  { value: "09", label: "Septiembre" },
+  { value: "10", label: "Octubre" },
+  { value: "11", label: "Noviembre" },
+  { value: "12", label: "Diciembre" }
+];
+
 const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 function getTodayISO() {
@@ -70,6 +85,12 @@ function getCurrentMonthValue() {
   return `${year}-${month}`;
 }
 
+function splitMonthValue(monthValue) {
+  const match = /^(\d{4})-(\d{2})$/.exec(String(monthValue || ""));
+  if (!match) return null;
+  return { year: match[1], month: match[2] };
+}
+
 createApp({
   data() {
     return {
@@ -77,6 +98,7 @@ createApp({
       slotOptions: SLOT_OPTIONS,
       teacherScheduleDays: WEEK_DAYS,
       justificationStatusOptions: JUSTIFICATION_STATUS_OPTIONS,
+      monthOptions: MONTH_OPTIONS,
       activeMenu: "ausencias",
       isLoggedIn: false,
       userEmail: "",
@@ -111,6 +133,8 @@ createApp({
       tasksMessage: "",
       hasTasksPage: false,
       justificationsMonth: getCurrentMonthValue(),
+      justificationsYear: String(new Date().getFullYear()),
+      justificationsMonthNumber: String(new Date().getMonth() + 1).padStart(2, "0"),
       justifications: [],
       loadingJustifications: false,
       justificationsMessage: "",
@@ -143,6 +167,7 @@ createApp({
   },
   mounted() {
     this.hasTasksPage = Boolean(document.getElementById("tasks-section"));
+    this.syncJustificationsMonthParts(this.justificationsMonth);
     if (this.hasTasksPage && this.isLoggedIn) {
       this.loadTasksForDate();
     }
@@ -153,6 +178,14 @@ createApp({
         return this.justifications.filter(j => j.status !== "Justificado");
       }
       return this.justifications;
+    },
+    justificationsYearOptions() {
+      const currentYear = new Date().getFullYear();
+      return [
+        String(currentYear + 1),
+        String(currentYear),
+        String(currentYear - 1)
+      ];
     }
   },
   watch: {
@@ -172,6 +205,7 @@ createApp({
       }
     },
     justificationsMonth(newValue, oldValue) {
+      this.syncJustificationsMonthParts(newValue);
       if (newValue && newValue !== oldValue && this.isLoggedIn) {
         this.loadJustifications();
       }
@@ -249,6 +283,7 @@ createApp({
       this.loadingJustifications = false;
       this.justificationsMessage = "";
       this.justificationsMonth = getCurrentMonthValue();
+      this.syncJustificationsMonthParts(this.justificationsMonth);
       this.loginForm.password = "";
       this.activeMenu = "ausencias";
       this.teacherScheduleTeacher = "";
@@ -272,6 +307,19 @@ createApp({
       this.userEmail = user.email;
       this.activeMenu = "ausencias";
       this.loadInitialData();
+    },
+    syncJustificationsMonthParts(monthValue) {
+      const parts = splitMonthValue(monthValue);
+      if (!parts) return;
+      this.justificationsYear = parts.year;
+      this.justificationsMonthNumber = parts.month;
+    },
+    onJustificationsMonthPartsChange() {
+      if (!this.justificationsYear || !this.justificationsMonthNumber) return;
+      const nextValue = `${this.justificationsYear}-${this.justificationsMonthNumber}`;
+      if (nextValue !== this.justificationsMonth) {
+        this.justificationsMonth = nextValue;
+      }
     },
     async loadInitialData() {
       await this.populateTeachers();
