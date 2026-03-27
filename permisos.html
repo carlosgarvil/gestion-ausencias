@@ -604,7 +604,7 @@
         for (const day of days) {
           const s = byDay.get(day);
           const total = s.approved + s.pending;
-          const totalMatchesCupo = total === s.slots;
+          const totalMatchesCupo = total >= s.slots;
 
           if ((s.approved + s.accepted) >= s.slots) {
             maxedDays.push(day);
