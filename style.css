@@ -535,6 +535,12 @@ button:active {
   gap: 0.75rem;
 }
 
+.justifications-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .justifications-content {
   margin-top: 1rem;
 }

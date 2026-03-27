@@ -64,6 +64,15 @@
             <input type="checkbox" v-model="hideJustified" />
             Ocultar justificados
           </label>
+          <div class="justifications-actions">
+            <button type="button" class="btn-secondary" :disabled="copyPendingEmailsLoading"
+              @click="copyPendingJustificationEmails">
+              {{ copyPendingEmailsLoading ? "Copiando..." : "Copiar emails pendientes" }}
+            </button>
+            <span v-if="copyPendingEmailsMessage" class="status-message" :class="copyPendingEmailsMessageType">
+              {{ copyPendingEmailsMessage }}
+            </span>
+          </div>
           <label class="month-picker">
             Mes
             <div class="month-picker-controls">

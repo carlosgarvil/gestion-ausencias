@@ -138,6 +138,9 @@ createApp({
       justifications: [],
       loadingJustifications: false,
       justificationsMessage: "",
+      copyPendingEmailsLoading: false,
+      copyPendingEmailsMessage: "",
+      copyPendingEmailsMessageType: "",
       hideJustified: false,
       substitutionForm: {
         teacher: "",
@@ -282,6 +285,9 @@ createApp({
       this.justifications = [];
       this.loadingJustifications = false;
       this.justificationsMessage = "";
+      this.copyPendingEmailsLoading = false;
+      this.copyPendingEmailsMessage = "";
+      this.copyPendingEmailsMessageType = "";
       this.justificationsMonth = getCurrentMonthValue();
       this.syncJustificationsMonthParts(this.justificationsMonth);
       this.loginForm.password = "";
@@ -644,6 +650,105 @@ createApp({
         statusMessageType: ""
       }));
       this.loadingJustifications = false;
+    },
+    clearCopyPendingEmailsMessage() {
+      this.copyPendingEmailsMessage = "";
+      this.copyPendingEmailsMessageType = "";
+    },
+    isPendingJustification(absence) {
+      const status = String(absence?.status || "").trim().toLowerCase();
+      return status !== "justificado";
+    },
+    async copyTextToClipboard(text) {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "absolute";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+
+      try {
+        const copied = document.execCommand("copy");
+        if (!copied) {
+          throw new Error("No se pudo copiar al portapapeles.");
+        }
+      } finally {
+        document.body.removeChild(textarea);
+      }
+    },
+    async copyPendingJustificationEmails() {
+      this.clearCopyPendingEmailsMessage();
+      this.copyPendingEmailsLoading = true;
+
+      try {
+        const pendingTeacherNames = [
+          ...new Set(
+            this.justifications
+              .filter((absence) => this.isPendingJustification(absence))
+              .map((absence) => String(absence.teacher_name || "").trim())
+              .filter(Boolean)
+          )
+        ];
+
+        if (!pendingTeacherNames.length) {
+          this.copyPendingEmailsMessage = "No hay ausencias pendientes o avisadas en este mes.";
+          this.copyPendingEmailsMessageType = "info";
+          return;
+        }
+
+        const { data, error } = await client
+          .from("teachers")
+          .select("name, email")
+          .in("name", pendingTeacherNames);
+
+        if (error) {
+          throw new Error(`No se pudieron cargar los correos: ${error.message}`);
+        }
+
+        const emailByTeacher = new Map(
+          (data || [])
+            .map((row) => [String(row.name || "").trim(), String(row.email || "").trim().toLowerCase()])
+            .filter(([name, email]) => name && email)
+        );
+
+        const emails = [
+          ...new Set(
+            pendingTeacherNames
+              .map((teacherName) => emailByTeacher.get(teacherName))
+              .filter(Boolean)
+          )
+        ];
+
+        if (!emails.length) {
+          this.copyPendingEmailsMessage = "No se encontraron correos para el profesorado con ausencias pendientes.";
+          this.copyPendingEmailsMessageType = "error";
+          return;
+        }
+
+        await this.copyTextToClipboard(emails.join("; "));
+        const missingTeachers = pendingTeacherNames.filter((teacherName) => !emailByTeacher.has(teacherName));
+        this.copyPendingEmailsMessage = missingTeachers.length
+          ? `Copiados ${emails.length} correos. Faltan ${missingTeachers.length} docentes sin email en teachers.`
+          : `Copiados ${emails.length} correos al portapapeles.`;
+        this.copyPendingEmailsMessageType = missingTeachers.length ? "info" : "ok";
+      } catch (error) {
+        console.error("Error copiando correos pendientes:", error);
+        this.copyPendingEmailsMessage = error.message || "No se pudieron copiar los correos.";
+        this.copyPendingEmailsMessageType = "error";
+      } finally {
+        this.copyPendingEmailsLoading = false;
+        if (this.copyPendingEmailsMessage) {
+          setTimeout(() => {
+            this.clearCopyPendingEmailsMessage();
+          }, 4000);
+        }
+      }
     },
     formatSlotLabel(start, end) {
       if (start === end) {
