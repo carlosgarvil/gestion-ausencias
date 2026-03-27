@@ -541,6 +541,49 @@ button:active {
   gap: 0.75rem;
 }
 
+.tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tooltip-text {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 0.6rem);
+  transform: translateX(-50%);
+  width: min(22rem, calc(100vw - 2rem));
+  padding: 0.65rem 0.8rem;
+  border-radius: 6px;
+  background: #1f2a3d;
+  color: #fff;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  z-index: 20;
+}
+
+.tooltip-text::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translateX(-50%);
+  border-width: 6px;
+  border-style: solid;
+  border-color: #1f2a3d transparent transparent transparent;
+}
+
+.tooltip-wrapper:hover .tooltip-text,
+.tooltip-wrapper:focus-within .tooltip-text {
+  opacity: 1;
+  visibility: visible;
+}
+
 .justifications-content {
   margin-top: 1rem;
 }
