@@ -65,10 +65,17 @@
             Ocultar justificados
           </label>
           <div class="justifications-actions">
-            <button type="button" class="btn-secondary" :disabled="copyPendingEmailsLoading"
-              @click="copyPendingJustificationEmails">
-              {{ copyPendingEmailsLoading ? "Copiando..." : "Copiar emails pendientes" }}
-            </button>
+            <div class="tooltip-wrapper">
+              <button type="button" class="btn-secondary" :disabled="copyPendingEmailsLoading"
+                @click="copyPendingJustificationEmails"
+                aria-label="Copiar emails de profesorado con ausencias pendientes de justificación. Puedes pegarlo en gMail. Recuerda usar la opción BCC para que los destinatarios no se vean entre ellos.">
+                {{ copyPendingEmailsLoading ? "Copiando..." : "Copiar emails" }}
+              </button>
+              <span class="tooltip-text" role="tooltip">
+                Copiar emails de profesorado con ausencias pendientes de justificación. Puedes pegarlo en gMail.
+                Recuerda usar la opción BCC para que los destinatarios no se vean entre ellos.
+              </span>
+            </div>
             <span v-if="copyPendingEmailsMessage" class="status-message" :class="copyPendingEmailsMessageType">
               {{ copyPendingEmailsMessage }}
             </span>
