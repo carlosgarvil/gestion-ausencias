@@ -69,6 +69,32 @@ function getTodayISO() {
   return `${year}-${month}-${day}`;
 }
 
+function toISODate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getDefaultAbsenceListISO() {
+  const today = new Date();
+  const jsDay = today.getDay(); // 0=Dom, 6=Sab
+
+  if (jsDay === 6) {
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + 2);
+    return toISODate(monday);
+  }
+
+  if (jsDay === 0) {
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + 1);
+    return toISODate(monday);
+  }
+
+  return toISODate(today);
+}
+
 function parseISODate(value) {
   if (!value) return null;
   const [year, month, day] = value.split("-").map(Number);
@@ -240,7 +266,7 @@ createApp({
     setTodayDefaults() {
       const today = getTodayISO();
       this.absenceForm.dateFrom = today;
-      this.listDate = today;
+      this.listDate = getDefaultAbsenceListISO();
       this.panelDate = today;
       this.tasksDate = today;
     },
@@ -433,7 +459,7 @@ createApp({
     },
     async loadAbsencesForDate() {
       if (!this.listDate) {
-        this.listDate = getTodayISO();
+        this.listDate = getDefaultAbsenceListISO();
       }
       this.loadingAbsences = true;
       const { data, error } = await client
