@@ -181,6 +181,10 @@ createApp({
       deleteTeacherMessageType: "",
       deleteTeacherSaving: false,
       teacherScheduleTeacher: "",
+      teacherScheduleActive: false,
+      teacherActiveSaving: false,
+      teacherActiveMessage: "",
+      teacherActiveMessageType: "",
       teacherScheduleEntries: [],
       teacherScheduleGrid: SLOT_OPTIONS.map((slot) => ({
         slotValue: slot.value,
@@ -202,11 +206,24 @@ createApp({
     }
   },
   computed: {
+    absentTeachersCount() {
+      const uniqueTeachers = new Set(
+        (this.absences || [])
+          .map((absence) => String(absence?.teacher_name || "").trim().toLowerCase())
+          .filter(Boolean)
+      );
+      return uniqueTeachers.size;
+    },
     filteredJustifications() {
       if (this.hideJustified) {
         return this.justifications.filter(j => j.status !== "Justificado");
       }
       return this.justifications;
+    },
+    inactiveTeachers() {
+      return (this.teachers || []).filter(
+        (teacher) => !this.toBooleanTeacherActive(teacher?.activo)
+      );
     },
     justificationsYearOptions() {
       const currentYear = new Date().getFullYear();
@@ -241,12 +258,17 @@ createApp({
     },
     teacherScheduleTeacher(newValue, oldValue) {
       if (!newValue) {
+        this.teacherScheduleActive = false;
+        this.teacherActiveSaving = false;
+        this.teacherActiveMessage = "";
+        this.teacherActiveMessageType = "";
         this.teacherScheduleGrid = this.buildEmptyTeacherScheduleGrid();
         this.teacherScheduleMessage = "";
         return;
       }
 
       if (newValue !== oldValue && this.isLoggedIn) {
+        this.syncSelectedTeacherActive();
         this.loadTeacherSchedule();
       }
     }
@@ -319,6 +341,10 @@ createApp({
       this.loginForm.password = "";
       this.activeMenu = "ausencias";
       this.teacherScheduleTeacher = "";
+      this.teacherScheduleActive = false;
+      this.teacherActiveSaving = false;
+      this.teacherActiveMessage = "";
+      this.teacherActiveMessageType = "";
       this.teacherScheduleEntries = [];
       this.teacherScheduleGrid = this.buildEmptyTeacherScheduleGrid();
       this.loadingTeacherSchedule = false;
@@ -367,7 +393,7 @@ createApp({
     async populateTeachers() {
       const { data, error } = await client
         .from("teachers")
-        .select("name")
+        .select("id, name, activo")
         .order("name", { ascending: true });
 
       if (error) {
@@ -377,6 +403,67 @@ createApp({
       }
 
       this.teachers = data || [];
+      this.syncSelectedTeacherActive();
+    },
+    getSelectedTeacherRecord() {
+      if (!this.teacherScheduleTeacher) {
+        return null;
+      }
+      return this.teachers.find((teacher) => teacher.name === this.teacherScheduleTeacher) || null;
+    },
+    toBooleanTeacherActive(value) {
+      if (typeof value === "boolean") return value;
+      if (typeof value === "number") return value === 1;
+      if (typeof value === "string") {
+        const normalized = value.trim().toLowerCase();
+        return normalized === "true" || normalized === "t" || normalized === "1";
+      }
+      return false;
+    },
+    syncSelectedTeacherActive() {
+      const selectedTeacher = this.getSelectedTeacherRecord();
+      this.teacherScheduleActive = this.toBooleanTeacherActive(selectedTeacher?.activo);
+    },
+    async handleTeacherActiveToggle(nextValue) {
+      const selectedTeacher = this.getSelectedTeacherRecord();
+      if (!selectedTeacher) {
+        this.teacherScheduleActive = false;
+        return;
+      }
+
+      const previousValue = this.teacherScheduleActive;
+      this.teacherScheduleActive = Boolean(nextValue);
+      this.teacherActiveSaving = true;
+      this.teacherActiveMessage = "Guardando...";
+      this.teacherActiveMessageType = "info";
+
+      try {
+        const updateQuery = client.from("teachers").update({ activo: this.teacherScheduleActive });
+        if (selectedTeacher.id !== null && selectedTeacher.id !== undefined) {
+          updateQuery.eq("id", selectedTeacher.id);
+        } else {
+          updateQuery.eq("name", selectedTeacher.name);
+        }
+
+        const { error } = await updateQuery;
+        if (error) {
+          throw error;
+        }
+
+        selectedTeacher.activo = this.teacherScheduleActive;
+        this.teacherActiveMessage = "Estado actualizado.";
+        this.teacherActiveMessageType = "ok";
+      } catch (error) {
+        this.teacherScheduleActive = previousValue;
+        this.teacherActiveMessage = `No se pudo actualizar: ${error.message}`;
+        this.teacherActiveMessageType = "error";
+      } finally {
+        this.teacherActiveSaving = false;
+        setTimeout(() => {
+          this.teacherActiveMessage = "";
+          this.teacherActiveMessageType = "";
+        }, 2200);
+      }
     },
     getDateRange(from, to) {
       if (!from) return [];
@@ -507,6 +594,23 @@ createApp({
       }
       this.loadingPanel = true;
       this.panelMessage = "";
+
+      let activeTeacherKeys = new Set();
+      const { data: teachersData, error: teachersError } = await client
+        .from("teachers")
+        .select("name, activo");
+
+      if (teachersError) {
+        console.error("Error cargando profesorado activo para panel:", teachersError);
+      } else {
+        activeTeacherKeys = new Set(
+          (teachersData || [])
+            .filter((teacher) => this.toBooleanTeacherActive(teacher.activo))
+            .map((teacher) => String(teacher.name || "").trim().toLowerCase())
+            .filter(Boolean)
+        );
+      }
+
       const { data, error } = await client
         .from("classes_to_cover")
         .select("*")
@@ -567,7 +671,12 @@ createApp({
         absentTeachers = absData || [];
       }
 
-      this.panelRows = this.mapClassesToPanelRows(data || [], guardEntries, absentTeachers);
+      this.panelRows = this.mapClassesToPanelRows(
+        data || [],
+        guardEntries,
+        absentTeachers,
+        activeTeacherKeys
+      );
       if (!this.panelRows.length) {
         this.panelMessage = "No hay clases pendientes de cubrir para este día.";
       }
@@ -787,7 +896,25 @@ createApp({
       const slot = this.slotOptions.find((option) => option.value === slotNumber);
       return slot ? slot.label : `Tramo ${slotValue}`;
     },
-    mapClassesToPanelRows(entries = [], guardEntries = [], absentTeachers = []) {
+    isTeacherActiveForPanel(teacherName, activeTeacherKeys = null) {
+      if (!(activeTeacherKeys instanceof Set) || !activeTeacherKeys.size) {
+        return true;
+      }
+      if (typeof teacherName !== "string") {
+        return true;
+      }
+      const normalized = teacherName.trim().toLowerCase();
+      if (!normalized || normalized === "—") {
+        return true;
+      }
+      return activeTeacherKeys.has(normalized);
+    },
+    mapClassesToPanelRows(
+      entries = [],
+      guardEntries = [],
+      absentTeachers = [],
+      activeTeacherKeys = null
+    ) {
       const rows = [];
       entries.forEach((entry) => {
         const group =
@@ -798,6 +925,9 @@ createApp({
           entry.classroom || entry.room || entry.aula || entry.classroom_name || "—";
         const teacher =
           entry.teacher_display_name || entry.teacher_name || entry.teacher || "—";
+        if (!this.isTeacherActiveForPanel(teacher, activeTeacherKeys)) {
+          return;
+        }
 
         const start = Number(entry.start_slot);
         const end = Number(entry.end_slot);
@@ -864,6 +994,9 @@ createApp({
         }
         const teacherName = entry.teacher_name || entry.teacher || "";
         const subject = entry.subject || entry.subject_name || "";
+        if (!this.isTeacherActiveForPanel(teacherName, activeTeacherKeys)) {
+          return;
+        }
         if (teacherName) {
           // Determinar clase CSS según tipo de guardia
           let guardClass = "guard-default";
@@ -1807,7 +1940,8 @@ createApp({
           name: trimmedName,
           display_name: trimmedName,
           email: trimmedEmail,
-          email_form: trimmedEmail
+          email_form: trimmedEmail,
+          activo: true
         });
 
         if (insertTeacherError) {
@@ -1839,6 +1973,34 @@ createApp({
             );
           }
           copiedCount = rowsToInsert.length;
+        }
+
+        const { data: deactivatedRows, error: deactivateError } = await client
+          .from("teachers")
+          .update({ activo: false })
+          .eq("name", teacher)
+          .select("id");
+
+        if (deactivateError) {
+          throw new Error(`Profesor creado, pero no se pudo marcar inactivo al titular: ${deactivateError.message}`);
+        }
+
+        if (!deactivatedRows?.length) {
+          const { data: fallbackDeactivatedRows, error: fallbackDeactivateError } = await client
+            .from("teachers")
+            .update({ activo: false })
+            .ilike("name", teacher)
+            .select("id");
+
+          if (fallbackDeactivateError) {
+            throw new Error(
+              `Profesor creado, pero no se pudo marcar inactivo al titular (búsqueda alternativa): ${fallbackDeactivateError.message}`
+            );
+          }
+
+          if (!fallbackDeactivatedRows?.length) {
+            throw new Error("Profesor creado, pero no se encontró al titular para marcarlo como inactivo.");
+          }
         }
 
         this.substitutionMessage = copiedCount

@@ -45,28 +45,28 @@
         <button id="btn-logout" type="button" class="btn-logout" @click="handleLogout">Cerrar sesión</button>
       </header>
       <nav class="top-nav">
-        <a class="nav-link" href="index.html">Ausencias</a>
-        <a class="nav-link" href="panel.html">Panel</a>
-        <a class="nav-link" href="tareas.html">Tareas</a>
-        <a class="nav-link" href="justificaciones.html">Gestión de Justificantes</a>
-        <a class="nav-link active" href="profesorado.html">Horario del Profesorado</a>
-        <a class="nav-link" href="horario-grupos.html">Horario de Grupos</a>
-        <a class="nav-link" href="gestion_profesorado.html">Añadir/quitar profesorado</a>
-        <a class="nav-link" href="permisos.html">Permisos P27</a>
-        <a class="nav-link" href="control-presencia.html">Control de presencia</a>
+        <a class="nav-link" href="index.html">📅 Ausencias</a>
+        <a class="nav-link" href="panel.html">📊 Panel</a>
+        <a class="nav-link" href="tareas.html">📝 Tareas</a>
+        <a class="nav-link" href="justificaciones.html">🗂️ Gestión de Justificantes</a>
+        <a class="nav-link active" href="profesorado.html">👨‍🏫 Horario del Profesorado</a>
+        <a class="nav-link" href="horario-grupos.html">👥 Horario de Grupos</a>
+        <a class="nav-link" href="gestion_profesorado.html">🔁 Sustituciones</a>
+        <a class="nav-link" href="permisos.html">📑 Permisos P27</a>
+        <a class="nav-link" href="control-presencia.html">⏱️ Control de presencia</a>
         <a class="nav-link" href="ayuda.html">Ayuda</a>
       </nav>
 
       <section id="teachers-section">
         <div class="teacher-schedule-header">
           <div>
-            <h2>Horario del Profesorado</h2>
+            <h2>👨‍🏫 Horario del Profesorado</h2>
             <p class="absence-meta">
               Consulta el horario semanal completo del docente, incluyendo horas marcadas como “no visibles”.
             </p>
           </div>
           <div class="teacher-schedule-controls">
-            <label>
+            <label class="teacher-selector-control">
               Profesor/a
               <select v-model="teacherScheduleTeacher">
                 <option value="">Selecciona…</option>
@@ -75,10 +75,19 @@
                 </option>
               </select>
             </label>
-            <button type="button" class="btn-refresh" @click="loadTeacherSchedule"
-              :disabled="!teacherScheduleTeacher || loadingTeacherSchedule">
-              Actualizar
-            </button>
+            <div v-if="teacherScheduleTeacher" class="tooltip-wrapper">
+              <label class="schedule-edit-toggle teacher-status-control">
+                <input type="checkbox" :checked="teacherScheduleActive" @change="handleTeacherActiveToggle($event.target.checked)"
+                  :disabled="teacherActiveSaving" />
+                  Marcar docente como {{ teacherScheduleActive ? 'no activo' : 'activo' }}
+              </label>
+              <span class="tooltip-text" role="tooltip">
+                Un profesor no activo no aparecerá en el panel de ausencias
+              </span>
+            </div>
+            <span v-if="teacherActiveMessage" class="schedule-edit-message" :class="teacherActiveMessageType">
+              {{ teacherActiveMessage }}
+            </span>
           </div>
         </div>
 
@@ -169,7 +178,4 @@
 </body>
 
 </html>
-
-
-
 

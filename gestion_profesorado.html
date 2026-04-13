@@ -45,20 +45,20 @@
         <button id="btn-logout" type="button" class="btn-logout" @click="handleLogout">Cerrar sesión</button>
       </header>
       <nav class="top-nav">
-        <a class="nav-link" href="index.html">Ausencias</a>
-        <a class="nav-link" href="panel.html">Panel</a>
-        <a class="nav-link" href="tareas.html">Tareas</a>
-        <a class="nav-link" href="justificaciones.html">Gestión de Justificantes</a>
-        <a class="nav-link" href="profesorado.html">Horario del Profesorado</a>
-        <a class="nav-link" href="horario-grupos.html">Horario de Grupos</a>
-        <a class="nav-link active" href="gestion_profesorado.html">Añadir/quitar profesorado</a>
-        <a class="nav-link" href="permisos.html">Permisos P27</a>
-        <a class="nav-link" href="control-presencia.html">Control de presencia</a>
+        <a class="nav-link" href="index.html">📅 Ausencias</a>
+        <a class="nav-link" href="panel.html">📊 Panel</a>
+        <a class="nav-link" href="tareas.html">📝 Tareas</a>
+        <a class="nav-link" href="justificaciones.html">🗂️ Gestión de Justificantes</a>
+        <a class="nav-link" href="profesorado.html">👨‍🏫 Horario del Profesorado</a>
+        <a class="nav-link" href="horario-grupos.html">👥 Horario de Grupos</a>
+        <a class="nav-link active" href="gestion_profesorado.html">🔁 Sustituciones</a>
+        <a class="nav-link" href="permisos.html">📑 Permisos P27</a>
+        <a class="nav-link" href="control-presencia.html">⏱️ Control de presencia</a>
         <a class="nav-link" href="ayuda.html">Ayuda</a>
       </nav>
 
       <section id="substitutions-section">
-        <h2>Añadir/quitar profesorado</h2>
+        <h2>🔁 Sustituciones</h2>
         <p>
           Desde aquí puedes crear nuevas incorporaciones copiando un horario existente o eliminar profesorado y sus
           horarios asociados en la base de datos.
@@ -67,6 +67,10 @@
         <div class="substitutions-layout">
           <div class="substitutions-block">
             <h3>Crear nuevo profesor desde titular</h3>
+            <p class="absence-meta">
+              Al crear un sustituto, el profesor titular se marcará como inactivo y no aparecerá en el panel de
+              ausencias, ya que se asume que sus clases quedan cubiertas.
+            </p>
             <form id="substitution-form" @submit.prevent="handleSubstitutionSubmit">
               <label>
                 Profesor titular
@@ -96,7 +100,18 @@
           </div>
 
           <div class="substitutions-block">
-            <h3>Eliminar profesorado</h3>
+            <div class="substitutions-block-header">
+              <h3>Eliminar profesorado</h3>
+              <div class="inactive-teachers-box">
+                <p class="inactive-teachers-title">Profesorado inactivo</p>
+                <ul v-if="inactiveTeachers.length" class="inactive-teachers-list">
+                  <li v-for="teacher in inactiveTeachers" :key="`inactive-${teacher.id || teacher.name}`">
+                    {{ teacher.name }}
+                  </li>
+                </ul>
+                <p v-else class="inactive-teachers-empty">No hay profesorado inactivo.</p>
+              </div>
+            </div>
             <form id="delete-teacher-form" @submit.prevent="handleTeacherDelete">
               <label>
                 Profesor/a a eliminar
@@ -127,7 +142,5 @@
 </body>
 
 </html>
-
-
 
 

@@ -665,6 +665,52 @@ button:active {
   margin-bottom: 0.5rem;
 }
 
+.substitutions-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.substitutions-block-header h3 {
+  margin: 0;
+}
+
+.inactive-teachers-box {
+  min-width: 220px;
+  max-width: 320px;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #dce5f2;
+  border-radius: 8px;
+  background: #f9fbff;
+}
+
+.inactive-teachers-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #344055;
+}
+
+.inactive-teachers-list {
+  margin: 0;
+  padding-left: 1rem;
+  max-height: 8rem;
+  overflow: auto;
+}
+
+.inactive-teachers-list li {
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.inactive-teachers-empty {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #5f6a7d;
+}
+
 .substitutions-block>span {
   /*pequeña nota aclaratoria*/
   font-size: 0.75rem;
@@ -777,7 +823,7 @@ table tbody tr:hover td {
     align-items: flex-end;
   }
 
-  .teacher-schedule-controls label {
+  .teacher-schedule-controls .teacher-selector-control {
     min-width: 220px;
   }
 }
@@ -939,6 +985,17 @@ table tbody tr:hover td {
   color: #344055;
 }
 
+.teacher-status-control {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 0.35rem;
+}
+
+.teacher-status-control input[type="checkbox"] {
+  margin: 0;
+}
+
 .schedule-edit-actions {
   display: flex;
   gap: 0.75rem;
@@ -1047,6 +1104,16 @@ table tbody tr:hover td {
   .status-select {
     width: 100%;
   }
+
+  .substitutions-block-header {
+    flex-direction: column;
+  }
+
+  .inactive-teachers-box {
+    width: 100%;
+    max-width: none;
+  }
+
   .simulated-absence-list {
     grid-template-columns: 1fr;
   }
