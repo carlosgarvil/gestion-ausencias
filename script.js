@@ -630,7 +630,6 @@ createApp({
       const dateObj = new Date(`${this.panelDate}T00:00:00`);
       const jsDay = dateObj.getDay(); // 0=Dom, 1=Lun ... 6=Sab
       const weekday = jsDay === 0 ? 7 : jsDay; // Convertir a 1=Lun ... 7=Dom
-      console.log("Panel weekday:", weekday, "for date:", this.panelDate);
 
       // Consultar profesorado de guardia desde timetable
       let guardEntries = [];
@@ -639,23 +638,14 @@ createApp({
         .select("*")
         .ilike("subject", "Guardia%");
 
-      console.log("Guard query result:", guardData, "error:", guardError);
-
       if (guardError) {
         console.error("Error cargando guardias:", guardError);
       } else {
-        console.log("Guard data count:", (guardData || []).length);
-        if (guardData && guardData.length > 0) {
-          console.log("Sample guard entry:", guardData[0]);
-          console.log("All guard teacher_names:", guardData.map(e => e.teacher_name));
-        }
         // Filtrar por día de la semana
         guardEntries = (guardData || []).filter((entry) => {
           const entryWeekday = this.normalizeWeekdayValue(entry);
-          console.log("Guard entry weekday:", entryWeekday, "expected:", weekday, "teacher:", entry.teacher_name);
           return entryWeekday === weekday;
         });
-        console.log("Filtered guard entries:", guardEntries.length);
       }
 
       // Consultar ausencias del día para cruzar con guardias
@@ -1649,16 +1639,10 @@ createApp({
       this.loadingTeacherSchedule = true;
       this.teacherScheduleMessage = "";
 
-      console.log("Buscando profesor:", this.teacherScheduleTeacher);
-
       const { data, error } = await client
         .from("timetable")
         .select("*")
         .eq("teacher_name", this.teacherScheduleTeacher);
-
-      console.log("Error:", error);
-      console.log("Data:", data);
-      console.log("Datos count:", data?.length);
 
       if (error) {
         console.error("Error cargando horario del profesorado:", error);
@@ -1670,10 +1654,6 @@ createApp({
       }
 
       if (!data || data.length === 0) {
-        // ObtÃ©n todos los nombres para comparar
-        const { data: allData } = await client.from("timetable").select("teacher_name");
-        console.log("Nombres disponibles en BD:", allData?.map(d => d.teacher_name) || []);
-
         this.teacherScheduleMessage = "No hay clases registradas para este docente.";
         this.teacherScheduleGrid = this.buildEmptyTeacherScheduleGrid();
         this.loadingTeacherSchedule = false;
@@ -1738,8 +1718,6 @@ createApp({
           delete cleanPayload.id;
           delete cleanPayload.timetable_id;
           delete cleanPayload.uuid;
-
-          console.log("Actualizando entrada ID:", idValue, "con payload:", cleanPayload);
 
           const { error } = await client
             .from("timetable")
