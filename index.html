@@ -54,7 +54,7 @@
         <a class="nav-link" href="gestion_profesorado.html">🔁 Sustituciones</a>
         <a class="nav-link" href="permisos.html">📑 Permisos P27</a>
         <a class="nav-link" href="control-presencia.html">⏱️ Control de presencia</a>
-        <a class="nav-link" href="ayuda.html">Ayuda</a>
+        <a class="nav-link" href="ayuda.html">ℹ️ Ayuda</a>
       </nav>
 
       <div>
@@ -119,16 +119,24 @@
 
           <section id="list-section">
             <h2>Ausencias del día ({{ absentTeachersCount }})</h2>
-            <label>
-              Fecha
-              <input type="date" v-model="listDate" />
-            </label>
-            <button type="button" id="btn-refresh-list" class="btn-refresh"
+            <div class="list-date-controls">
+              <button type="button" class="btn-secondary list-date-nav" @click="changeListDate(-1)"
+                aria-label="Día anterior" title="Día anterior">◀</button>
+              <label>
+                Fecha
+                <input type="date" v-model="listDate" />
+              </label>
+              <button type="button" class="btn-secondary list-date-nav" @click="changeListDate(1)"
+                aria-label="Día siguiente" title="Día siguiente">▶</button>
+            </div>
+            <button type="button" id="btn-refresh-list" class="btn-refresh hidden"
               @click="loadAbsencesForDate">Actualizar</button>
 
             <div id="list-container" class="absence-list">
               <p v-if="loadingAbsences">Cargando ausencias…</p>
-              <p v-else-if="!absences.length">No hay ausencias registradas para este día.</p>
+              <p v-else-if="!absences.length">
+                <span v-if="isListDateWeekend" title="Es fin de semana">⚠️ </span>No hay ausencias registradas para este día.
+              </p>
               <article v-for="absence in absences" :key="absence.id" class="absence-item" :class="{ 'duplicate-teacher': absence.isDuplicate }">
                 <div class="absence-main" @click="toggleAbsenceEdit(absence)">
                   <strong>{{ absence.teacher_name }}</strong>

@@ -214,6 +214,10 @@ createApp({
       );
       return uniqueTeachers.size;
     },
+    isListDateWeekend() {
+      const weekdayValue = this.getWeekdayValueFromDate(this.listDate);
+      return weekdayValue === 6 || weekdayValue === 7;
+    },
     filteredJustifications() {
       if (this.hideJustified) {
         return this.justifications.filter(j => j.status !== "Justificado");
@@ -576,6 +580,16 @@ createApp({
       // Detectar profesores duplicados
       this.markDuplicateTeachers();
       this.loadingAbsences = false;
+    },
+    changeListDate(dayOffset) {
+      const baseDate = parseISODate(this.listDate) || parseISODate(getDefaultAbsenceListISO());
+      if (!baseDate) {
+        return;
+      }
+
+      const nextDate = new Date(baseDate);
+      nextDate.setDate(nextDate.getDate() + dayOffset);
+      this.listDate = toISODate(nextDate);
     },
     markDuplicateTeachers() {
       const teacherCount = {};
