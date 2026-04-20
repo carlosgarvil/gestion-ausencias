@@ -554,6 +554,21 @@ createApp({
         console.log("Filtered guard entries:", guardEntries.length);
       }
 
+      let guestClassroomEntries = [];
+      const { data: guestData, error: guestError } = await client
+        .from("timetable")
+        .select("*")
+        .eq("aula_huesped", true);
+
+      if (guestError) {
+        console.error("Error cargando aulas huésped:", guestError);
+      } else {
+        guestClassroomEntries = (guestData || []).filter((entry) => {
+          const entryWeekday = this.normalizeWeekdayValue(entry);
+          return entryWeekday === weekday;
+        });
+      }
+
       // Consultar ausencias del día para cruzar con guardias
       let absentTeachers = [];
       const { data: absData, error: absError } = await client
@@ -567,7 +582,12 @@ createApp({
         absentTeachers = absData || [];
       }
 
-      this.panelRows = this.mapClassesToPanelRows(data || [], guardEntries, absentTeachers);
+      this.panelRows = this.mapClassesToPanelRows(
+        data || [],
+        guardEntries,
+        absentTeachers,
+        guestClassroomEntries
+      );
       if (!this.panelRows.length) {
         this.panelMessage = "No hay clases pendientes de cubrir para este día.";
       }
@@ -787,7 +807,7 @@ createApp({
       const slot = this.slotOptions.find((option) => option.value === slotNumber);
       return slot ? slot.label : `Tramo ${slotValue}`;
     },
-    mapClassesToPanelRows(entries = [], guardEntries = [], absentTeachers = []) {
+    mapClassesToPanelRows(entries = [], guardEntries = [], absentTeachers = [], guestClassroomEntries = []) {
       const rows = [];
       entries.forEach((entry) => {
         const group =
@@ -845,6 +865,13 @@ createApp({
           return true;
         });
       };
+      const escapePanelHtml = (value) =>
+        String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
 
       // Agrupar profesorado de guardia por slot
       const guardBySlot = new Map();
@@ -879,7 +906,7 @@ createApp({
           const absent = isTeacherAbsent(teacherName, slotValue);
           const absentClass = absent ? " guard-absent" : "";
           const displayText = subject ? `${teacherName} (${subject})` : teacherName;
-          const displayHtml = `<span class="${guardClass}${absentClass}">${displayText}</span>`;
+          const displayHtml = `<span class="${guardClass}${absentClass}">${escapePanelHtml(displayText)}</span>`;
           guardBySlot.get(slotValue).push({
             teacherName,
             displayHtml,
@@ -900,6 +927,64 @@ createApp({
           .map((guard) => guard.displayHtml);
         guardBySlot.set(slotValue, sortedGuards);
       });
+
+      const guestClassroomsBySlot = new Map();
+      guestClassroomEntries.forEach((entry) => {
+        const slotValue = this.normalizeSlotValue(entry);
+        if (!Number.isFinite(slotValue)) return;
+
+        const teacherName = entry.teacher_name || entry.teacher || "";
+        if (teacherName && isTeacherAbsent(teacherName, slotValue)) {
+          return;
+        }
+
+        const classroom =
+          entry.classroom || entry.room || entry.aula || entry.classroom_name || "";
+        if (!classroom) {
+          return;
+        }
+
+        const labelParts = [classroom];
+        if (teacherName) labelParts.push(teacherName);
+        const displayText = labelParts.join(" · ");
+        const sortText = `${classroom} ${teacherName}`.trim();
+
+        if (!guestClassroomsBySlot.has(slotValue)) {
+          guestClassroomsBySlot.set(slotValue, []);
+        }
+
+        guestClassroomsBySlot.get(slotValue).push({
+          classroom,
+          teacherName,
+          sortText,
+          displayHtml: `<span class="guest-classroom">${escapePanelHtml(displayText)}</span>`
+        });
+      });
+
+      guestClassroomsBySlot.forEach((classrooms, slotValue) => {
+        const seen = new Set();
+        const sortedClassrooms = classrooms
+          .slice()
+          .sort((a, b) => a.sortText.localeCompare(b.sortText, "es"))
+          .filter((item) => {
+            const key = `${item.classroom}|${item.teacherName}`;
+            if (seen.has(key)) {
+              return false;
+            }
+            seen.add(key);
+            return true;
+          })
+          .map((item) => item.displayHtml);
+        guestClassroomsBySlot.set(slotValue, sortedClassrooms);
+      });
+
+      const buildGuestClassroomsHtml = (slotValue) => {
+        const guestClassrooms = guestClassroomsBySlot.has(slotValue)
+          ? guestClassroomsBySlot.get(slotValue)
+          : [];
+
+        return guestClassrooms.join("<br>");
+      };
 
       const normalizedRows = rows.sort((a, b) => {
         if (a.slotValue === null) return 1;
@@ -953,10 +1038,10 @@ createApp({
           a.teacher.localeCompare(b.teacher)
         );
 
-        // Obtener profesorado de guardia para este slot
         const guardTeachers = guardBySlot.has(slotEntry.slotValue)
           ? guardBySlot.get(slotEntry.slotValue)
           : [];
+        const guestClassroomsHtml = buildGuestClassroomsHtml(slotEntry.slotValue);
 
         teacherRows.forEach((teacherRow, index) => {
           groupedRows.push({
@@ -969,7 +1054,8 @@ createApp({
             subject: Array.from(teacherRow.subjects).join(", "),
             classroom: Array.from(teacherRow.classrooms).join(", "),
             teacher: teacherRow.teacher,
-            guardTeachers: guardTeachers
+            guardTeachers,
+            guestClassroomsHtml
           });
         });
       });
@@ -1354,6 +1440,18 @@ createApp({
 
       return Boolean(firstDefined);
     },
+    isTimetableAulaHuesped(entry) {
+      const value = entry.aula_huesped;
+      if (value === undefined || value === null) {
+        return true;
+      }
+
+      if (typeof value === "string") {
+        return value.toLowerCase() === "true" || value === "1";
+      }
+
+      return Boolean(value);
+    },
     mapEntriesToTeacherSchedule(entries = []) {
       const grid = this.buildEmptyTeacherScheduleGrid();
       const dayIndexByValue = new Map(
@@ -1398,6 +1496,7 @@ createApp({
           }
           existingItem.entries.push(entry);
           existingItem.visible = existingItem.visible && entry.visible;
+          existingItem.aulaHuesped = existingItem.aulaHuesped && entry.aulaHuesped;
         } else {
           grid[slotIndex].days[dayIndex].push({
             subject: entry.subject,
@@ -1405,6 +1504,7 @@ createApp({
             groupSet: entry.group ? new Set([entry.group]) : new Set(),
             classroom: entry.classroom,
             visible: entry.visible,
+            aulaHuesped: entry.aulaHuesped,
             weekdayValue: entry.weekdayValue,
             slotValue: entry.slotValue,
             entries: [entry],
@@ -1422,7 +1522,8 @@ createApp({
           cells.map((cell) => ({
             ...cell,
             group: cell.group || Array.from(cell.groupSet).join(", "),
-            visible: cell.entries.every((entry) => entry.visible !== false)
+            visible: cell.entries.every((entry) => entry.visible !== false),
+            aulaHuesped: cell.entries.every((entry) => entry.aulaHuesped !== false)
           }))
         );
       });
@@ -1446,6 +1547,7 @@ createApp({
         group,
         classroom,
         visible: this.isScheduleEntryVisible(entry),
+        aulaHuesped: this.isTimetableAulaHuesped(entry),
         original: entry,
         slot: slotValue,
         weekday: weekdayValue
@@ -1463,6 +1565,7 @@ createApp({
       const groupValue = entry.group?.trim() || "";
       const classroomValue = entry.classroom?.trim() || null; // classroom es nullable
       const visibleValue = entry.visible !== false;
+      const aulaHuespedValue = entry.aulaHuesped !== false;
 
       const source = entry.original || {};
 
@@ -1477,6 +1580,7 @@ createApp({
       assignField(["group_name", "group", "class_group", "grupo"], groupValue);
       assignField(["classroom", "classroom_name", "room", "aula"], classroomValue);
       assignField(["visible", "is_visible", "mostrar", "show_in_panel", "show"], visibleValue);
+      payload.aula_huesped = aulaHuespedValue;
 
       return payload;
     },
@@ -1570,6 +1674,7 @@ createApp({
         group: entry.group || "",
         classroom: entry.classroom || "",
         visible: entry.visible !== false,
+        aulaHuesped: entry.aulaHuesped !== false,
         original: entry.original || entry
       }));
     },

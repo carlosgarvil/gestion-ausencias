@@ -106,6 +106,7 @@
                           <p class="schedule-class-main">{{ classInfo.subject }}</p>
                           <p v-if="classInfo.group" class="schedule-class-meta">{{ classInfo.group }}</p>
                           <p v-if="classInfo.classroom" class="schedule-class-meta">Aula: {{ classInfo.classroom }}</p>
+                          <p v-if="classInfo.aulaHuesped" class="schedule-class-meta">🧑‍🏫 Aula huésped</p>
                           <span v-if="!classInfo.visible" class="schedule-badge">No visible</span>
                         </template>
                         <div v-else class="schedule-class-edit">
@@ -129,6 +130,10 @@
                               <label class="schedule-edit-toggle">
                                 <input type="checkbox" v-model="entry.visible" />
                                 Mostrar en panel
+                              </label>
+                              <label class="schedule-edit-toggle">
+                                <input type="checkbox" v-model="entry.aulaHuesped" />
+                                Aula huésped
                               </label>
                             </div>
                             <p v-if="!entry.id" class="schedule-edit-warning">
@@ -169,7 +174,4 @@
 </body>
 
 </html>
-
-
-
 

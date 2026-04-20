@@ -245,6 +245,14 @@ button {
   opacity: 0.55;
 }
 
+.guest-classroom {
+  display: inline-block;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
 .absence-list {
   margin-top: 0.75rem;
 }
