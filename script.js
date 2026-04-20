@@ -424,6 +424,14 @@ createApp({
       }
       return false;
     },
+    isTeacherActiveForPanel(teacherName, activeTeacherKeys) {
+      if (!(activeTeacherKeys instanceof Set)) {
+        return true;
+      }
+
+      const teacherKey = String(teacherName || "").trim().toLowerCase();
+      return Boolean(teacherKey && activeTeacherKeys.has(teacherKey));
+    },
     syncSelectedTeacherActive() {
       const selectedTeacher = this.getSelectedTeacherRecord();
       this.teacherScheduleActive = this.toBooleanTeacherActive(selectedTeacher?.activo);
@@ -609,7 +617,7 @@ createApp({
       this.loadingPanel = true;
       this.panelMessage = "";
 
-      let activeTeacherKeys = new Set();
+      let activeTeacherKeys = null;
       const { data: teachersData, error: teachersError } = await client
         .from("teachers")
         .select("name, activo");
@@ -690,7 +698,13 @@ createApp({
         absentTeachers = absData || [];
       }
 
-      this.panelRows = this.mapClassesToPanelRows(data || [], guardEntries, absentTeachers);
+      this.panelRows = this.mapClassesToPanelRows(
+        data || [],
+        guardEntries,
+        absentTeachers,
+        guestClassroomEntries,
+        activeTeacherKeys
+      );
       if (!this.panelRows.length) {
         this.panelMessage = "No hay clases pendientes de cubrir para este día.";
       }
@@ -910,7 +924,13 @@ createApp({
       const slot = this.slotOptions.find((option) => option.value === slotNumber);
       return slot ? slot.label : `Tramo ${slotValue}`;
     },
-    mapClassesToPanelRows(entries = [], guardEntries = [], absentTeachers = []) {
+    mapClassesToPanelRows(
+      entries = [],
+      guardEntries = [],
+      absentTeachers = [],
+      guestClassroomEntries = [],
+      activeTeacherKeys = null
+    ) {
       const rows = [];
       entries.forEach((entry) => {
         const group =
@@ -1043,6 +1063,9 @@ createApp({
         if (!Number.isFinite(slotValue)) return;
 
         const teacherName = entry.teacher_name || entry.teacher || "";
+        if (!this.isTeacherActiveForPanel(teacherName, activeTeacherKeys)) {
+          return;
+        }
         if (teacherName && isTeacherAbsent(teacherName, slotValue)) {
           return;
         }
