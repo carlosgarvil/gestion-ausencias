@@ -45,16 +45,16 @@
         <button id="btn-logout" type="button" class="btn-logout" @click="handleLogout">Cerrar sesión</button>
       </header>
       <nav class="top-nav">
-        <a class="nav-link active" href="index.html">Ausencias</a>
-        <a class="nav-link" href="panel.html">Panel</a>
-        <a class="nav-link" href="tareas.html">Tareas</a>
-        <a class="nav-link" href="justificaciones.html">Gestión de Justificantes</a>
-        <a class="nav-link" href="profesorado.html">Horario del Profesorado</a>
-        <a class="nav-link" href="horario-grupos.html">Horario de Grupos</a>
-        <a class="nav-link" href="gestion_profesorado.html">Añadir/quitar profesorado</a>
-        <a class="nav-link" href="permisos.html">Permisos P27</a>
-        <a class="nav-link" href="control-presencia.html">Control de presencia</a>
-        <a class="nav-link" href="ayuda.html">Ayuda</a>
+        <a class="nav-link active" href="index.html">📅 Ausencias</a>
+        <a class="nav-link" href="panel.html">📊 Panel</a>
+        <a class="nav-link" href="tareas.html">📝 Tareas</a>
+        <a class="nav-link" href="justificaciones.html">🗂️ Gestión de Justificantes</a>
+        <a class="nav-link" href="profesorado.html">👨‍🏫 Horario del Profesorado</a>
+        <a class="nav-link" href="horario-grupos.html">👥 Horario de Grupos</a>
+        <a class="nav-link" href="gestion_profesorado.html">🔁 Sustituciones</a>
+        <a class="nav-link" href="permisos.html">📑 Permisos P27</a>
+        <a class="nav-link" href="control-presencia.html">⏱️ Control de presencia</a>
+        <a class="nav-link" href="ayuda.html">ℹ️ Ayuda</a>
       </nav>
 
       <div>
@@ -118,17 +118,25 @@
           </section>
 
           <section id="list-section">
-            <h2>Ausencias del día</h2>
-            <label>
-              Fecha
-              <input type="date" v-model="listDate" />
-            </label>
-            <button type="button" id="btn-refresh-list" class="btn-refresh"
+            <h2>Ausencias del día ({{ absentTeachersCount }})</h2>
+            <div class="list-date-controls">
+              <button type="button" class="btn-secondary list-date-nav" @click="changeListDate(-1)"
+                aria-label="Día anterior" title="Día anterior">◀</button>
+              <label>
+                Fecha
+                <input type="date" v-model="listDate" />
+              </label>
+              <button type="button" class="btn-secondary list-date-nav" @click="changeListDate(1)"
+                aria-label="Día siguiente" title="Día siguiente">▶</button>
+            </div>
+            <button type="button" id="btn-refresh-list" class="btn-refresh hidden"
               @click="loadAbsencesForDate">Actualizar</button>
 
             <div id="list-container" class="absence-list">
               <p v-if="loadingAbsences">Cargando ausencias…</p>
-              <p v-else-if="!absences.length">No hay ausencias registradas para este día.</p>
+              <p v-else-if="!absences.length">
+                <span v-if="isListDateWeekend" title="Es fin de semana">⚠️ </span>No hay ausencias registradas para este día.
+              </p>
               <article v-for="absence in absences" :key="absence.id" class="absence-item" :class="{ 'duplicate-teacher': absence.isDuplicate }">
                 <div class="absence-main" @click="toggleAbsenceEdit(absence)">
                   <strong>{{ absence.teacher_name }}</strong>
@@ -172,4 +180,3 @@
 </body>
 
 </html>
-

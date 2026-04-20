@@ -181,6 +181,10 @@ createApp({
       deleteTeacherMessageType: "",
       deleteTeacherSaving: false,
       teacherScheduleTeacher: "",
+      teacherScheduleActive: false,
+      teacherActiveSaving: false,
+      teacherActiveMessage: "",
+      teacherActiveMessageType: "",
       teacherScheduleEntries: [],
       teacherScheduleGrid: SLOT_OPTIONS.map((slot) => ({
         slotValue: slot.value,
@@ -202,11 +206,28 @@ createApp({
     }
   },
   computed: {
+    absentTeachersCount() {
+      const uniqueTeachers = new Set(
+        (this.absences || [])
+          .map((absence) => String(absence?.teacher_name || "").trim().toLowerCase())
+          .filter(Boolean)
+      );
+      return uniqueTeachers.size;
+    },
+    isListDateWeekend() {
+      const weekdayValue = this.getWeekdayValueFromDate(this.listDate);
+      return weekdayValue === 6 || weekdayValue === 7;
+    },
     filteredJustifications() {
       if (this.hideJustified) {
         return this.justifications.filter(j => j.status !== "Justificado");
       }
       return this.justifications;
+    },
+    inactiveTeachers() {
+      return (this.teachers || []).filter(
+        (teacher) => !this.toBooleanTeacherActive(teacher?.activo)
+      );
     },
     justificationsYearOptions() {
       const currentYear = new Date().getFullYear();
@@ -241,12 +262,17 @@ createApp({
     },
     teacherScheduleTeacher(newValue, oldValue) {
       if (!newValue) {
+        this.teacherScheduleActive = false;
+        this.teacherActiveSaving = false;
+        this.teacherActiveMessage = "";
+        this.teacherActiveMessageType = "";
         this.teacherScheduleGrid = this.buildEmptyTeacherScheduleGrid();
         this.teacherScheduleMessage = "";
         return;
       }
 
       if (newValue !== oldValue && this.isLoggedIn) {
+        this.syncSelectedTeacherActive();
         this.loadTeacherSchedule();
       }
     }
@@ -319,6 +345,10 @@ createApp({
       this.loginForm.password = "";
       this.activeMenu = "ausencias";
       this.teacherScheduleTeacher = "";
+      this.teacherScheduleActive = false;
+      this.teacherActiveSaving = false;
+      this.teacherActiveMessage = "";
+      this.teacherActiveMessageType = "";
       this.teacherScheduleEntries = [];
       this.teacherScheduleGrid = this.buildEmptyTeacherScheduleGrid();
       this.loadingTeacherSchedule = false;
@@ -367,7 +397,7 @@ createApp({
     async populateTeachers() {
       const { data, error } = await client
         .from("teachers")
-        .select("name")
+        .select("id, name, activo")
         .order("name", { ascending: true });
 
       if (error) {
@@ -377,6 +407,67 @@ createApp({
       }
 
       this.teachers = data || [];
+      this.syncSelectedTeacherActive();
+    },
+    getSelectedTeacherRecord() {
+      if (!this.teacherScheduleTeacher) {
+        return null;
+      }
+      return this.teachers.find((teacher) => teacher.name === this.teacherScheduleTeacher) || null;
+    },
+    toBooleanTeacherActive(value) {
+      if (typeof value === "boolean") return value;
+      if (typeof value === "number") return value === 1;
+      if (typeof value === "string") {
+        const normalized = value.trim().toLowerCase();
+        return normalized === "true" || normalized === "t" || normalized === "1";
+      }
+      return false;
+    },
+    syncSelectedTeacherActive() {
+      const selectedTeacher = this.getSelectedTeacherRecord();
+      this.teacherScheduleActive = this.toBooleanTeacherActive(selectedTeacher?.activo);
+    },
+    async handleTeacherActiveToggle(nextValue) {
+      const selectedTeacher = this.getSelectedTeacherRecord();
+      if (!selectedTeacher) {
+        this.teacherScheduleActive = false;
+        return;
+      }
+
+      const previousValue = this.teacherScheduleActive;
+      this.teacherScheduleActive = Boolean(nextValue);
+      this.teacherActiveSaving = true;
+      this.teacherActiveMessage = "Guardando...";
+      this.teacherActiveMessageType = "info";
+
+      try {
+        const updateQuery = client.from("teachers").update({ activo: this.teacherScheduleActive });
+        if (selectedTeacher.id !== null && selectedTeacher.id !== undefined) {
+          updateQuery.eq("id", selectedTeacher.id);
+        } else {
+          updateQuery.eq("name", selectedTeacher.name);
+        }
+
+        const { error } = await updateQuery;
+        if (error) {
+          throw error;
+        }
+
+        selectedTeacher.activo = this.teacherScheduleActive;
+        this.teacherActiveMessage = "Estado actualizado.";
+        this.teacherActiveMessageType = "ok";
+      } catch (error) {
+        this.teacherScheduleActive = previousValue;
+        this.teacherActiveMessage = `No se pudo actualizar: ${error.message}`;
+        this.teacherActiveMessageType = "error";
+      } finally {
+        this.teacherActiveSaving = false;
+        setTimeout(() => {
+          this.teacherActiveMessage = "";
+          this.teacherActiveMessageType = "";
+        }, 2200);
+      }
     },
     getDateRange(from, to) {
       if (!from) return [];
@@ -490,6 +581,16 @@ createApp({
       this.markDuplicateTeachers();
       this.loadingAbsences = false;
     },
+    changeListDate(dayOffset) {
+      const baseDate = parseISODate(this.listDate) || parseISODate(getDefaultAbsenceListISO());
+      if (!baseDate) {
+        return;
+      }
+
+      const nextDate = new Date(baseDate);
+      nextDate.setDate(nextDate.getDate() + dayOffset);
+      this.listDate = toISODate(nextDate);
+    },
     markDuplicateTeachers() {
       const teacherCount = {};
       // Contar cuántas ausencias tiene cada profesor
@@ -507,6 +608,23 @@ createApp({
       }
       this.loadingPanel = true;
       this.panelMessage = "";
+
+      let activeTeacherKeys = new Set();
+      const { data: teachersData, error: teachersError } = await client
+        .from("teachers")
+        .select("name, activo");
+
+      if (teachersError) {
+        console.error("Error cargando profesorado activo para panel:", teachersError);
+      } else {
+        activeTeacherKeys = new Set(
+          (teachersData || [])
+            .filter((teacher) => this.toBooleanTeacherActive(teacher.activo))
+            .map((teacher) => String(teacher.name || "").trim().toLowerCase())
+            .filter(Boolean)
+        );
+      }
+
       const { data, error } = await client
         .from("classes_to_cover")
         .select("*")
@@ -526,7 +644,6 @@ createApp({
       const dateObj = new Date(`${this.panelDate}T00:00:00`);
       const jsDay = dateObj.getDay(); // 0=Dom, 1=Lun ... 6=Sab
       const weekday = jsDay === 0 ? 7 : jsDay; // Convertir a 1=Lun ... 7=Dom
-      console.log("Panel weekday:", weekday, "for date:", this.panelDate);
 
       // Consultar profesorado de guardia desde timetable
       let guardEntries = [];
@@ -535,23 +652,14 @@ createApp({
         .select("*")
         .ilike("subject", "Guardia%");
 
-      console.log("Guard query result:", guardData, "error:", guardError);
-
       if (guardError) {
         console.error("Error cargando guardias:", guardError);
       } else {
-        console.log("Guard data count:", (guardData || []).length);
-        if (guardData && guardData.length > 0) {
-          console.log("Sample guard entry:", guardData[0]);
-          console.log("All guard teacher_names:", guardData.map(e => e.teacher_name));
-        }
         // Filtrar por día de la semana
         guardEntries = (guardData || []).filter((entry) => {
           const entryWeekday = this.normalizeWeekdayValue(entry);
-          console.log("Guard entry weekday:", entryWeekday, "expected:", weekday, "teacher:", entry.teacher_name);
           return entryWeekday === weekday;
         });
-        console.log("Filtered guard entries:", guardEntries.length);
       }
 
       let guestClassroomEntries = [];
@@ -582,12 +690,7 @@ createApp({
         absentTeachers = absData || [];
       }
 
-      this.panelRows = this.mapClassesToPanelRows(
-        data || [],
-        guardEntries,
-        absentTeachers,
-        guestClassroomEntries
-      );
+      this.panelRows = this.mapClassesToPanelRows(data || [], guardEntries, absentTeachers);
       if (!this.panelRows.length) {
         this.panelMessage = "No hay clases pendientes de cubrir para este día.";
       }
@@ -807,7 +910,7 @@ createApp({
       const slot = this.slotOptions.find((option) => option.value === slotNumber);
       return slot ? slot.label : `Tramo ${slotValue}`;
     },
-    mapClassesToPanelRows(entries = [], guardEntries = [], absentTeachers = [], guestClassroomEntries = []) {
+    mapClassesToPanelRows(entries = [], guardEntries = [], absentTeachers = []) {
       const rows = [];
       entries.forEach((entry) => {
         const group =
@@ -818,6 +921,9 @@ createApp({
           entry.classroom || entry.room || entry.aula || entry.classroom_name || "—";
         const teacher =
           entry.teacher_display_name || entry.teacher_name || entry.teacher || "—";
+        if (!this.isTeacherActiveForPanel(teacher, activeTeacherKeys)) {
+          return;
+        }
 
         const start = Number(entry.start_slot);
         const end = Number(entry.end_slot);
@@ -891,6 +997,9 @@ createApp({
         }
         const teacherName = entry.teacher_name || entry.teacher || "";
         const subject = entry.subject || entry.subject_name || "";
+        if (!this.isTeacherActiveForPanel(teacherName, activeTeacherKeys)) {
+          return;
+        }
         if (teacherName) {
           // Determinar clase CSS según tipo de guardia
           let guardClass = "guard-default";
@@ -1620,16 +1729,10 @@ createApp({
       this.loadingTeacherSchedule = true;
       this.teacherScheduleMessage = "";
 
-      console.log("Buscando profesor:", this.teacherScheduleTeacher);
-
       const { data, error } = await client
         .from("timetable")
         .select("*")
         .eq("teacher_name", this.teacherScheduleTeacher);
-
-      console.log("Error:", error);
-      console.log("Data:", data);
-      console.log("Datos count:", data?.length);
 
       if (error) {
         console.error("Error cargando horario del profesorado:", error);
@@ -1641,10 +1744,6 @@ createApp({
       }
 
       if (!data || data.length === 0) {
-        // ObtÃ©n todos los nombres para comparar
-        const { data: allData } = await client.from("timetable").select("teacher_name");
-        console.log("Nombres disponibles en BD:", allData?.map(d => d.teacher_name) || []);
-
         this.teacherScheduleMessage = "No hay clases registradas para este docente.";
         this.teacherScheduleGrid = this.buildEmptyTeacherScheduleGrid();
         this.loadingTeacherSchedule = false;
@@ -1710,8 +1809,6 @@ createApp({
           delete cleanPayload.id;
           delete cleanPayload.timetable_id;
           delete cleanPayload.uuid;
-
-          console.log("Actualizando entrada ID:", idValue, "con payload:", cleanPayload);
 
           const { error } = await client
             .from("timetable")
@@ -1912,7 +2009,8 @@ createApp({
           name: trimmedName,
           display_name: trimmedName,
           email: trimmedEmail,
-          email_form: trimmedEmail
+          email_form: trimmedEmail,
+          activo: true
         });
 
         if (insertTeacherError) {
@@ -1944,6 +2042,34 @@ createApp({
             );
           }
           copiedCount = rowsToInsert.length;
+        }
+
+        const { data: deactivatedRows, error: deactivateError } = await client
+          .from("teachers")
+          .update({ activo: false })
+          .eq("name", teacher)
+          .select("id");
+
+        if (deactivateError) {
+          throw new Error(`Profesor creado, pero no se pudo marcar inactivo al titular: ${deactivateError.message}`);
+        }
+
+        if (!deactivatedRows?.length) {
+          const { data: fallbackDeactivatedRows, error: fallbackDeactivateError } = await client
+            .from("teachers")
+            .update({ activo: false })
+            .ilike("name", teacher)
+            .select("id");
+
+          if (fallbackDeactivateError) {
+            throw new Error(
+              `Profesor creado, pero no se pudo marcar inactivo al titular (búsqueda alternativa): ${fallbackDeactivateError.message}`
+            );
+          }
+
+          if (!fallbackDeactivatedRows?.length) {
+            throw new Error("Profesor creado, pero no se encontró al titular para marcarlo como inactivo.");
+          }
         }
 
         this.substitutionMessage = copiedCount

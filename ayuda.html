@@ -45,16 +45,16 @@
         <button id="btn-logout" type="button" class="btn-logout" @click="handleLogout">Cerrar sesión</button>
       </header>
       <nav class="top-nav">
-        <a class="nav-link" href="index.html">Ausencias</a>
-        <a class="nav-link" href="panel.html">Panel</a>
-        <a class="nav-link" href="tareas.html">Tareas</a>
-        <a class="nav-link" href="justificaciones.html">Gestión de Justificantes</a>
-        <a class="nav-link" href="profesorado.html">Horario del Profesorado</a>
-        <a class="nav-link" href="horario-grupos.html">Horario de Grupos</a>
-        <a class="nav-link" href="gestion_profesorado.html">Añadir/quitar profesorado</a>
-        <a class="nav-link" href="permisos.html">Permisos P27</a>
-        <a class="nav-link" href="control-presencia.html">Control de presencia</a>
-        <a class="nav-link active" href="ayuda.html">Ayuda</a>
+        <a class="nav-link" href="index.html">📅 Ausencias</a>
+        <a class="nav-link" href="panel.html">📊 Panel</a>
+        <a class="nav-link" href="tareas.html">📝 Tareas</a>
+        <a class="nav-link" href="justificaciones.html">🗂️ Gestión de Justificantes</a>
+        <a class="nav-link" href="profesorado.html">👨‍🏫 Horario del Profesorado</a>
+        <a class="nav-link" href="horario-grupos.html">👥 Horario de Grupos</a>
+        <a class="nav-link" href="gestion_profesorado.html">🔁 Sustituciones</a>
+        <a class="nav-link" href="permisos.html">📑 Permisos P27</a>
+        <a class="nav-link" href="control-presencia.html">⏱️ Control de presencia</a>
+        <a class="nav-link active" href="ayuda.html">ℹ️ Ayuda</a>
       </nav>
 
       <section id="help-section">
@@ -75,6 +75,7 @@
             </li>
             <li>El panel muestra exactamente la información que se visualiza en la TV de la Sala del Profesorado:
               cualquier cambio en los tramos en este sistema se reflejará en dicha TV tras actualizar el panel.</li>
+              <li>Por defecto, el panel de actualiza automáticamente cada minuto</li>
           </ul>
         </article>
 
@@ -91,14 +92,16 @@
         </article>
 
         <article class="help-block">
-          <h3>Gestión de sustituciones</h3>
+          <h3>🔁 Sustituciones</h3>
           <ul>
             <li>Desde la pestaña “Sustituciones” puedes crear un nuevo profesor copiando el horario completo de un
               titular.</li>
             <li>El nuevo docente necesita un nombre (Apellidos, Nombre) y un correo @iespoligonosur.org.</li>
-            <li>Al realizar la copia, se duplican todas las entradas del horario del titular para el nuevo docente.</li>
+            <li>Al realizar la copia, se duplican todas las entradas del horario del titular para el nuevo docent y se desactiva el docente titular.</li>
+            <li>Un docente desactivado no aparece en el panel de ausencias.</li>
             <li>El nuevo profesor aparecerá automáticamente en los selectores de la aplicación para registrar sus
               propias ausencias.</li>
+              <li>Una vez incorporado el docente titular, se puede eliminar o desactivar el sustitutosegún sea necesario.</li>
           </ul>
         </article>
 
@@ -121,7 +124,5 @@
 </body>
 
 </html>
-
-
 
 

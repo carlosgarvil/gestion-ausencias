@@ -279,16 +279,16 @@
         <button id="btn-logout" type="button" class="btn-logout" @click="handleLogout">Cerrar sesión</button>
       </header>
       <nav class="top-nav">
-        <a class="nav-link" href="index.html">Ausencias</a>
-        <a class="nav-link" href="panel.html">Panel</a>
-        <a class="nav-link" href="tareas.html">Tareas</a>
-        <a class="nav-link" href="justificaciones.html">Gestión de Justificantes</a>
-        <a class="nav-link" href="profesorado.html">Horario del Profesorado</a>
-        <a class="nav-link" href="horario-grupos.html">Horario de Grupos</a>
-        <a class="nav-link" href="gestion_profesorado.html">Añadir/quitar profesorado</a>
-        <a class="nav-link active" href="permisos.html">Permisos P27</a>
-        <a class="nav-link" href="control-presencia.html">Control de presencia</a>
-        <a class="nav-link" href="ayuda.html">Ayuda</a>
+        <a class="nav-link" href="index.html">📅 Ausencias</a>
+        <a class="nav-link" href="panel.html">📊 Panel</a>
+        <a class="nav-link" href="tareas.html">📝 Tareas</a>
+        <a class="nav-link" href="justificaciones.html">🗂️ Gestión de Justificantes</a>
+        <a class="nav-link" href="profesorado.html">👨‍🏫 Horario del Profesorado</a>
+        <a class="nav-link" href="horario-grupos.html">👥 Horario de Grupos</a>
+        <a class="nav-link" href="gestion_profesorado.html">🔁 Sustituciones</a>
+        <a class="nav-link active" href="permisos.html">📑 Permisos P27</a>
+        <a class="nav-link" href="control-presencia.html">⏱️ Control de presencia</a>
+        <a class="nav-link" href="ayuda.html">ℹ️ Ayuda</a>
       </nav>
 
       <section id="permisos-section">
@@ -372,7 +372,7 @@
         <p class="footer-note">
           <b>Interpretación aplicada:</b> "Aprobada" ocupa cupo del día; las "Pendientes" se ordenan por prioridad
           (sin P.27 lectivo aprobado en el curso) y, si hay empate, por orden alfabético circular desde la letra
-          indicada.
+          indicada. Además, no se aceptan más de 2 permisos P.27 por persona dentro del periodo lectivo calculado.
         </p>
       </section>
     </section>
@@ -513,6 +513,7 @@
       const ALPHA = "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ".split("");
       const ABSENCE_START_SLOT = 1;
       const ABSENCE_END_SLOT = 14;
+      const MAX_APPROVED_PER_PERIOD = 2;
 
       function alphaKeyFromLetter(surnameFirst, startLetter) {
         const norm = normalizeForSort(surnameFirst);
@@ -676,6 +677,8 @@
               : `<span class="pill ok">ACEPTAR</span>`)
             : r.decision.startsWith("FUERA")
               ? `<span class="pill bad">${escapeHtml(r.decision)}</span>`
+              : r.decision.startsWith("LÍMITE")
+              ? `<span class="pill bad">${escapeHtml(r.decision)}</span>`
               : r.decision.startsWith("YA APROBADA")
                 ? `<span class="pill warn">${escapeHtml(r.decision)}</span>`
                 : r.decision.startsWith("YA RECHAZADA")
@@ -835,12 +838,16 @@
         }
 
         const approvedCountByPersonCourse = new Map();
+        const approvedCountByPersonPeriod = new Map();
+        const keyPerson = (name) => normalizeForSort(name);
         const keyPersonCourse = (name, curso) => normalizeForSort(name) + "|" + curso;
 
         for (const e of expanded) {
           if (isEstadoAprobada(e["Estado"])) {
+            const kp = keyPerson(e["Nombre"]);
             const k = keyPersonCourse(e["Nombre"], e._curso);
             approvedCountByPersonCourse.set(k, (approvedCountByPersonCourse.get(k) || 0) + 1);
+            approvedCountByPersonPeriod.set(kp, (approvedCountByPersonPeriod.get(kp) || 0) + 1);
           }
         }
 
@@ -880,10 +887,8 @@
             return normalizeForSort(a["Nombre"]).localeCompare(normalizeForSort(b["Nombre"]), "es");
           });
 
-          const accepted = new Set();
-          for (let i = 0; i < pendingSorted.length; i++) if (i < free) accepted.add(pendingSorted[i]);
-
           let acceptedCount = 0, rejectedCount = 0;
+          let remainingSlots = free;
 
           for (const e of bucket.approved) {
             resultRows.push({ ...e, decision: "YA APROBADA (ocupa cupo)", reason: `Cuenta como plaza ocupada. Cupo=${cupo}, ocupadas=${occupied}, huecos=${free}.` });
@@ -894,9 +899,20 @@
           for (const e of pendingSorted) {
             const kpc = keyPersonCourse(e["Nombre"], e._curso);
             const hadApproved = (approvedCountByPersonCourse.get(kpc) || 0);
+            const kp = keyPerson(e["Nombre"]);
+            const approvedInPeriod = (approvedCountByPersonPeriod.get(kp) || 0);
 
-            if (accepted.has(e)) {
+            if (approvedInPeriod >= MAX_APPROVED_PER_PERIOD) {
+              rejectedCount++;
+              resultRows.push({
+                ...e,
+                decision: "LÍMITE PERIODO LECTIVO",
+                reason: `No entra: ya tiene ${approvedInPeriod} P.27 aprobados en el periodo lectivo (máximo ${MAX_APPROVED_PER_PERIOD}).`,
+              });
+            } else if (remainingSlots > 0) {
               acceptedCount++;
+              remainingSlots--;
+              approvedCountByPersonPeriod.set(kp, approvedInPeriod + 1);
               resultRows.push({
                 ...e,
                 decision: "ACEPTAR",
@@ -911,7 +927,7 @@
                 decision: "FUERA DE CUPO",
                 reason: (free === 0)
                   ? `No hay huecos: cupo=${cupo}, ocupadas(aprobadas)=${occupied}.`
-                  : `Supera el cupo tras aplicar prioridad y desempate (letra ${letra}). Huecos=${free}.`,
+                  : `No quedan huecos tras aplicar prioridad y desempate (letra ${letra}).`,
               });
             }
           }
@@ -929,6 +945,7 @@
         const decisionRank = (d) => {
           if (d.startsWith("YA APROBADA")) return 0;
           if (d === "ACEPTAR") return 1;
+          if (d.startsWith("LÍMITE")) return 2;
           if (d.startsWith("FUERA")) return 2;
           if (d.startsWith("YA RECHAZADA")) return 3;
           return 9;
