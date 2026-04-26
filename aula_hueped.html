@@ -64,7 +64,10 @@
           <div>
             <h2>🏫 Panel semanal de aula huésped</h2>
             <p class="absence-meta">
-              Aulas activas marcadas como aula huésped, organizadas de 1ª a 7ª hora.
+              Aulas activas marcadas como aula huésped.
+            </p>
+            <p v-if="guestActionMessage" class="schedule-edit-message" :class="guestActionMessageType">
+              {{ guestActionMessage }}
             </p>
           </div>
           <div class="teacher-schedule-controls">
@@ -73,6 +76,54 @@
             </button>
           </div>
         </div>
+
+        <details class="guest-classroom-manager">
+          <summary>Añadir grupo al aula huésped</summary>
+          <form class="guest-classroom-form" @submit.prevent="loadCandidateClasses">
+            <label>
+              Día
+              <select v-model.number="addGuestForm.weekday" @change="resetCandidateClasses" required>
+                <option v-for="day in weekDays" :key="`add-day-${day.value}`" :value="day.value">
+                  {{ day.label }}
+                </option>
+              </select>
+            </label>
+            <label>
+              Franja
+              <select v-model.number="addGuestForm.slot" @change="resetCandidateClasses" required>
+                <option v-for="slot in slotOptions" :key="`add-slot-${slot.value}`" :value="slot.value">
+                  {{ slot.label }}
+                </option>
+              </select>
+            </label>
+            <button type="submit" class="btn-refresh" :disabled="loadingCandidateClasses">
+              Cargar aulas candidatas
+            </button>
+          </form>
+
+          <p class="absence-meta">
+            Pulsa una clase candidata para añadirla al cuadrante de aula huésped.
+          </p>
+          <p v-if="candidateClassMessage" class="absence-meta">{{ candidateClassMessage }}</p>
+          <div v-if="candidateClasses.length" class="guest-candidate-list">
+            <article v-for="(classInfo, idx) in candidateClasses" :key="`candidate-${classInfo.id || idx}`"
+              class="schedule-class guest-candidate-card"
+              :class="{ 'guest-classroom-card--saving': classInfo.saving }"
+              title="Pulsa para añadir esta clase al aula huésped"
+              @click="addClassToGuestClassroom(classInfo)">
+              <div>
+                <p class="schedule-class-main">{{ classInfo.group || "Sin grupo" }}</p>
+                <p class="schedule-class-meta">
+                  <span v-if="classInfo.subject">{{ classInfo.subject }}</span>
+                  <span v-if="classInfo.subject && classInfo.classroom"> · </span>
+                  <span v-if="classInfo.classroom">Aula: {{ classInfo.classroom }}</span>
+                </p>
+                <p v-if="classInfo.teacher" class="schedule-class-meta">{{ classInfo.teacher }}</p>
+              </div>
+              <span v-if="classInfo.saving" class="schedule-badge">Guardando</span>
+            </article>
+          </div>
+        </details>
 
         <div class="guest-classroom-summary" v-if="!loadingGuestClassrooms && !guestClassroomMessage">
           <span><strong>{{ activeClassroomCount }}</strong> aulas</span>
@@ -96,7 +147,10 @@
                   <td v-for="(cell, index) in row.days" :key="`cell-${row.slotValue}-${index}`">
                     <div v-if="cell.length" class="schedule-cell">
                       <article v-for="(classInfo, idx) in cell" :key="`guest-${row.slotValue}-${index}-${idx}`"
-                        class="schedule-class guest-classroom-card">
+                        class="schedule-class guest-classroom-card"
+                        :class="{ 'guest-classroom-card--saving': classInfo.saving }"
+                        title="Pulsa para quitar esta clase de aula huésped"
+                        @click="unmarkGuestClassroom(classInfo)">
                         <p class="schedule-class-main">{{ classInfo.classroom }}</p>
                         <p v-if="classInfo.teacher" class="schedule-class-meta">{{ classInfo.teacher }}</p>
                         <p class="schedule-class-meta">
@@ -104,6 +158,7 @@
                           <span v-if="classInfo.group && classInfo.subject"> · </span>
                           <span v-if="classInfo.subject">{{ classInfo.subject }}</span>
                         </p>
+                        <span v-if="classInfo.saving" class="schedule-badge">Guardando</span>
                       </article>
                     </div>
                     <div v-else class="schedule-cell schedule-cell--empty">-</div>
@@ -128,13 +183,12 @@
     const client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const SLOT_OPTIONS = [
-      { value: 1, label: "1ª 08:15-09:15" },
-      { value: 2, label: "2ª 09:15-10:15" },
-      { value: 3, label: "3ª 10:15-11:15" },
-      { value: 4, label: "4ª 11:15-11:45 (recreo)" },
-      { value: 5, label: "5ª 11:45-12:45" },
-      { value: 6, label: "6ª 12:45-13:45" },
-      { value: 7, label: "7ª 13:45-14:45" }
+      { value: 1, label: "08:15-09:15" },
+      { value: 2, label: "09:15-10:15" },
+      { value: 3, label: "10:15-11:15" },
+      { value: 5, label: "11:45-12:45" },
+      { value: 6, label: "12:45-13:45" },
+      { value: 7, label: "13:45-14:45" }
     ];
 
     const WEEK_DAYS = [
@@ -158,9 +212,19 @@
           loginMessageType: "",
           loadingGuestClassrooms: false,
           guestClassroomMessage: "",
+          guestActionMessage: "",
+          guestActionMessageType: "",
           guestClassroomGrid: this.buildEmptyGuestClassroomGrid(),
           rawGuestClassroomEntries: [],
-          weekDays: WEEK_DAYS
+          addGuestForm: {
+            weekday: WEEK_DAYS[0].value,
+            slot: SLOT_OPTIONS[0].value
+          },
+          loadingCandidateClasses: false,
+          candidateClassMessage: "",
+          candidateClasses: [],
+          weekDays: WEEK_DAYS,
+          slotOptions: SLOT_OPTIONS
         };
       },
       computed: {
@@ -212,8 +276,13 @@
           this.loginForm.password = "";
           this.loadingGuestClassrooms = false;
           this.guestClassroomMessage = "";
+          this.guestActionMessage = "";
+          this.guestActionMessageType = "";
           this.guestClassroomGrid = this.buildEmptyGuestClassroomGrid();
           this.rawGuestClassroomEntries = [];
+          this.loadingCandidateClasses = false;
+          this.candidateClassMessage = "";
+          this.candidateClasses = [];
         },
         async handleLogin() {
           this.loginMessage = "";
@@ -324,21 +393,55 @@
         },
         isTimetableAulaHuesped(entry) {
           const value = entry.aula_huesped;
-          if (value === undefined || value === null) return true;
+          if (value === undefined || value === null) return false;
           if (typeof value === "string") {
             return value.toLowerCase() === "true" || value === "1";
           }
           return Boolean(value);
         },
+        normalizeTeacherName(value) {
+          return String(value || "").trim().toLowerCase();
+        },
+        isTeacherInactiveForPanel(teacherName, inactiveTeacherKeys) {
+          const teacherKey = this.normalizeTeacherName(teacherName);
+          return Boolean(teacherKey && inactiveTeacherKeys.has(teacherKey));
+        },
+        async loadInactiveTeacherKeys() {
+          const { data, error } = await client
+            .from("teachers")
+            .select("name")
+            .or("activo.is.null,activo.eq.false");
+
+          if (error) {
+            throw error;
+          }
+
+          return new Set(
+            (data || [])
+              .map((teacher) => this.normalizeTeacherName(teacher.name))
+              .filter(Boolean)
+          );
+        },
         normalizeTimetableEntry(entry) {
           return {
+            id: this.getTimetableEntryId(entry),
             slotValue: this.normalizeSlotValue(entry),
             weekdayValue: this.normalizeWeekdayValue(entry),
             classroom: entry.classroom || entry.classroom_name || entry.room || entry.aula || "",
             teacher: entry.teacher_name || entry.teacher || entry.teacher_display_name || entry.docente || "",
             group: entry.group_name || entry.group || entry.class_group || entry.grupo || "",
-            subject: entry.subject || entry.subject_name || entry.materia || entry.asignatura || ""
+            subject: entry.subject || entry.subject_name || entry.materia || entry.asignatura || "",
+            saving: false,
+            original: entry
           };
+        },
+        getTimetableEntryId(entry) {
+          const candidates = [entry.id, entry.timetable_id, entry.uuid];
+          return candidates.find((value) => value !== undefined && value !== null) ?? null;
+        },
+        resetCandidateClasses() {
+          this.candidateClassMessage = "";
+          this.candidateClasses = [];
         },
         mapEntriesToGuestClassroomGrid(entries = []) {
           const grid = this.buildEmptyGuestClassroomGrid();
@@ -369,9 +472,198 @@
 
           return grid;
         },
+        async unmarkGuestClassroom(classInfo) {
+          if (!classInfo || classInfo.saving) return;
+
+          const idValue = classInfo.id || this.getTimetableEntryId(classInfo.original || {});
+          if (idValue === null || idValue === undefined) {
+            this.guestActionMessage = "No se puede actualizar esta clase porque no tiene identificador.";
+            this.guestActionMessageType = "error";
+            return;
+          }
+
+          const classroomLabel = classInfo.classroom ? ` del aula ${classInfo.classroom}` : "";
+          const teacherLabel = classInfo.teacher ? ` (${classInfo.teacher})` : "";
+          const confirmed = window.confirm(
+            `¿Quitar esta clase${classroomLabel}${teacherLabel} de aula huésped?`
+          );
+          if (!confirmed) return;
+
+          classInfo.saving = true;
+          this.guestActionMessage = "Quitando aula huésped...";
+          this.guestActionMessageType = "info";
+
+          try {
+            const { error } = await client
+              .from("timetable")
+              .update({ aula_huesped: false })
+              .eq("id", idValue);
+
+            if (error) throw error;
+
+            this.guestActionMessage = "Clase quitada de aula huésped.";
+            this.guestActionMessageType = "ok";
+            await this.loadGuestClassrooms();
+          } catch (error) {
+            console.error("Error quitando aula huésped:", error);
+            this.guestActionMessage = "No se pudo quitar el aula huésped: " + error.message;
+            this.guestActionMessageType = "error";
+          } finally {
+            classInfo.saving = false;
+            setTimeout(() => {
+              this.guestActionMessage = "";
+              this.guestActionMessageType = "";
+            }, 2600);
+          }
+        },
+        async loadCandidateClasses() {
+          this.loadingCandidateClasses = true;
+          this.candidateClassMessage = "Cargando clases...";
+          this.candidateClasses = [];
+
+          try {
+            const selectedWeekday = Number(this.addGuestForm.weekday);
+            const selectedSlot = Number(this.addGuestForm.slot);
+            const weekdayLetterByValue = {
+              1: "L",
+              2: "M",
+              3: "X",
+              4: "J",
+              5: "V"
+            };
+            const selectedWeekdayLetter = weekdayLetterByValue[selectedWeekday];
+
+            if (!selectedWeekdayLetter) {
+              throw new Error("Día seleccionado no válido.");
+            }
+
+            const inactiveTeacherKeys = await this.loadInactiveTeacherKeys();
+            const { data, error } = await client
+              .from("timetable")
+              .select("*")
+              .eq("weekday_letter", selectedWeekdayLetter)
+              .eq("slot", selectedSlot)
+              .or("aula_huesped.is.null,aula_huesped.eq.false")
+              .order("group_name", { ascending: true })
+              .order("teacher_name", { ascending: true });
+
+            if (error) throw error;
+
+            const rawEntries = data || [];
+            const matchingDaySlot = rawEntries.map((entry) => ({
+              raw: entry,
+              normalized: this.normalizeTimetableEntry(entry)
+            }));
+
+            console.log("[aula_huesped] loadCandidateClasses", {
+              selectedWeekday,
+              selectedWeekdayLetter,
+              selectedSlot,
+              rowsReturned: rawEntries.length,
+              candidateMatches: matchingDaySlot.length
+            });
+
+            console.log("[aula_huesped] matchingDaySlot sample", matchingDaySlot.map(({ raw, normalized }) => ({
+              id: normalized.id,
+              teacherRaw: raw.teacher_name,
+              teacherNormalized: normalized.teacher,
+              groupRaw: raw.group_name,
+              groupNormalized: normalized.group,
+              classroomRaw: raw.classroom,
+              classroomNormalized: normalized.classroom,
+              weekdayLetterRaw: raw.weekday_letter,
+              weekdayValue: normalized.weekdayValue,
+              slotRaw: raw.slot,
+              slotValue: normalized.slotValue,
+              aulaHuespedRaw: raw.aula_huesped,
+              aulaHuespedInterpreted: this.isTimetableAulaHuesped(raw)
+            })));
+
+            const candidates = matchingDaySlot
+              .map(({ normalized }) => normalized)
+              .filter((entry) => {
+                const groupName = String(entry.group || "").trim();
+                const normalizedGroupName = groupName.toUpperCase();
+                return (
+                  groupName &&
+                  !this.isTeacherInactiveForPanel(entry.teacher, inactiveTeacherKeys) &&
+                  !normalizedGroupName.includes("GUARDIA") &&
+                  !normalizedGroupName.includes("ESO") &&
+                  !normalizedGroupName.includes("DIVER") &&
+                  !normalizedGroupName.includes("BACH") &&
+                  !normalizedGroupName.includes("CONVIVENCIA")
+                );
+              })
+              .sort((a, b) => {
+                const groupCompare = String(a.group).localeCompare(String(b.group), "es");
+                if (groupCompare !== 0) return groupCompare;
+                return String(a.teacher).localeCompare(String(b.teacher), "es");
+              });
+
+            this.candidateClasses = candidates;
+            this.candidateClassMessage = candidates.length
+              ? `${candidates.length} clases disponibles en esa franja.`
+              : "No hay clases disponibles para ese día y franja.";
+          } catch (error) {
+            console.error("Error cargando clases candidatas:", error);
+            this.candidateClassMessage = "No se pudieron cargar las clases: " + error.message;
+          } finally {
+            this.loadingCandidateClasses = false;
+          }
+        },
+        async addClassToGuestClassroom(classInfo) {
+          if (!classInfo || classInfo.saving) return;
+
+          const idValue = classInfo.id || this.getTimetableEntryId(classInfo.original || {});
+          if (idValue === null || idValue === undefined) {
+            this.candidateClassMessage = "No se puede actualizar esta clase porque no tiene identificador.";
+            return;
+          }
+
+          const classroomLabel = classInfo.classroom ? ` en el aula ${classInfo.classroom}` : "";
+          const teacherLabel = classInfo.teacher ? ` (${classInfo.teacher})` : "";
+          const groupLabel = classInfo.group ? ` ${classInfo.group}` : "";
+          const confirmed = window.confirm(
+            `¿Añadir la clase${groupLabel}${classroomLabel}${teacherLabel} al aula huésped?`
+          );
+          if (!confirmed) return;
+
+          classInfo.saving = true;
+          this.candidateClassMessage = "Añadiendo clase al aula huésped...";
+
+          try {
+            const { error } = await client
+              .from("timetable")
+              .update({ aula_huesped: true })
+              .eq("id", idValue);
+
+            if (error) throw error;
+
+            this.candidateClasses = this.candidateClasses.filter((entry) => String(entry.id) !== String(idValue));
+            this.candidateClassMessage = "Clase añadida al aula huésped.";
+            await this.loadGuestClassrooms();
+          } catch (error) {
+            console.error("Error añadiendo aula huésped:", error);
+            this.candidateClassMessage = "No se pudo añadir la clase: " + error.message;
+          } finally {
+            classInfo.saving = false;
+          }
+        },
         async loadGuestClassrooms() {
           this.loadingGuestClassrooms = true;
           this.guestClassroomMessage = "";
+
+          let inactiveTeacherKeys;
+          try {
+            inactiveTeacherKeys = await this.loadInactiveTeacherKeys();
+          } catch (error) {
+            console.error("Error cargando profesorado no activo para aula huésped:", error);
+            this.guestClassroomMessage = "No se pudo cargar el profesorado no activo.";
+            this.guestClassroomGrid = this.buildEmptyGuestClassroomGrid();
+            this.rawGuestClassroomEntries = [];
+            this.loadingGuestClassrooms = false;
+            return;
+          }
 
           const { data, error } = await client
             .from("timetable")
@@ -390,6 +682,7 @@
           const activeEntries = (data || []).filter((entry) => {
             if (!this.isTimetableAulaHuesped(entry) || !this.isScheduleEntryVisible(entry)) return false;
             const normalized = this.normalizeTimetableEntry(entry);
+            if (this.isTeacherInactiveForPanel(normalized.teacher, inactiveTeacherKeys)) return false;
             return (
               Number.isFinite(normalized.slotValue) &&
               normalized.slotValue >= 1 &&

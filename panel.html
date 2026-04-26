@@ -79,7 +79,6 @@
             <thead>
               <tr>
                 <th>Franja horaria</th>
-                <th>Aulas huésped</th>
                 <th>Profesorado de guardia</th>
                 <th>Grupo</th>
                 <th>Materia</th>
@@ -88,9 +87,9 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="(row, index) in panelRows" :key="row.key || `${row.teacher}-${index}-${row.slotValue}`">
+              <tr v-for="(row, index) in panelRows" :key="row.key || `${row.teacher}-${index}-${row.slotValue}`"
+                :class="row.slotStripeClass">
                 <td v-if="row.showSlotLabel" :rowspan="row.slotRowSpan">{{ row.slotLabel }}</td>
-                <td v-if="row.showSlotLabel" :rowspan="row.slotRowSpan" v-html="row.guestClassroomsHtml"></td>
                 <td v-if="row.showSlotLabel" :rowspan="row.slotRowSpan" v-html="row.guardTeachers.join('<br>')"></td>
                 <td>{{ row.group }}</td>
                 <td>{{ row.subject }}</td>

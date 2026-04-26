@@ -670,20 +670,9 @@ createApp({
         });
       }
 
-      let guestClassroomEntries = [];
-      const { data: guestData, error: guestError } = await client
-        .from("timetable")
-        .select("*")
-        .eq("aula_huesped", true);
-
-      if (guestError) {
-        console.error("Error cargando aulas huésped:", guestError);
-      } else {
-        guestClassroomEntries = (guestData || []).filter((entry) => {
-          const entryWeekday = this.normalizeWeekdayValue(entry);
-          return entryWeekday === weekday;
-        });
-      }
+      // Aulas huésped ocultas temporalmente en panel.html. Mantener la lógica
+      // de mapClassesToPanelRows para reactivar esta columna más adelante.
+      const guestClassroomEntries = [];
 
       // Consultar ausencias del día para cruzar con guardias
       let absentTeachers = [];
@@ -1180,6 +1169,9 @@ createApp({
             key: `${slotEntry.slotValue ?? slotEntry.slotLabel}-${teacherRow.teacher}-${index}`,
             slotValue: slotEntry.slotValue,
             slotLabel: slotEntry.slotLabel,
+            slotStripeClass: Number.isFinite(slotEntry.slotValue) && slotEntry.slotValue % 2 === 0
+              ? "panel-slot-even"
+              : "panel-slot-odd",
             showSlotLabel: index === 0,
             slotRowSpan: teacherRows.length,
             group: Array.from(teacherRow.groups).join(", "),

@@ -226,10 +226,6 @@ button {
   font-weight: 600;
 }
 
-.panel-table tbody tr:nth-child(even) {
-  background: #fafbfc;
-}
-
 /* Colores sutiles para tipos de guardia */
 .guard-biblioteca {
   display: inline-block;
@@ -270,10 +266,10 @@ button {
 
 .guest-classroom {
   display: inline-block;
-  padding: 0.15rem 0.4rem;
-  border-radius: 4px;
-  background: #e8f5e9;
-  color: #1b5e20;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
 }
 
 .absence-list {
@@ -816,6 +812,14 @@ table tbody tr:nth-child(even) td {
   /* sutil contraste */
 }
 
+.panel-table tbody tr.panel-slot-even td {
+  background-color: #ececec;
+}
+
+.panel-table tbody tr.panel-slot-odd td {
+  background-color: #ffffff;
+}
+
 /* Rayado vertical sutil por columnas (opcional: mejora lectura en tablas anchas) */
 .justifications-table tbody td:nth-child(odd),
 .substitutions-table tbody td:nth-child(odd),
@@ -981,6 +985,46 @@ table tbody tr:hover td {
   font-size: 0.88rem;
 }
 
+.guest-classroom-manager {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border: 1px solid #dce5f2;
+  border-radius: 8px;
+  background: #f9fbff;
+}
+
+.guest-classroom-manager summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.guest-classroom-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+  margin: 0.75rem 0 0;
+}
+
+.guest-classroom-form label {
+  margin-top: 0;
+}
+
+.guest-candidate-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+.guest-candidate-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: flex-start;
+  cursor: pointer;
+}
+
 .guest-classroom-table th:first-child {
   min-width: 140px;
 }
@@ -990,7 +1034,12 @@ table tbody tr:hover td {
 }
 
 .guest-classroom-card {
-  cursor: default;
+  cursor: pointer;
+}
+
+.guest-classroom-card--saving {
+  opacity: 0.72;
+  pointer-events: none;
 }
 
 .schedule-badge {
@@ -1083,6 +1132,10 @@ table tbody tr:hover td {
 
 .schedule-edit-message.ok {
   color: #0f7a39;
+}
+
+.schedule-edit-message.info {
+  color: #255f99;
 }
 
 .schedule-edit-message.error {
@@ -1253,8 +1306,12 @@ table tbody tr:hover td {
     font-weight: bold;
   }
 
-  .panel-table tr:nth-child(even) {
-    background-color: #f9f9f9;
+  .panel-table tbody tr.panel-slot-even td {
+    background-color: #ececec;
+  }
+
+  .panel-table tbody tr.panel-slot-odd td {
+    background-color: #ffffff;
   }
 
   .justifications-table {
