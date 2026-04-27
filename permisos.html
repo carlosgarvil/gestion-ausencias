@@ -246,6 +246,60 @@
       color: #b00020;
       font-weight: 700;
     }
+
+    .teacher-picker-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 16px;
+    }
+
+    .teacher-picker-modal {
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #ddd;
+      padding: 14px;
+      width: min(560px, 100%);
+      max-height: 85vh;
+      overflow: auto;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.2);
+    }
+
+    .teacher-picker-modal h3 {
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+
+    .teacher-picker-modal p {
+      margin: 0 0 10px;
+      color: #333;
+      font-size: 14px;
+    }
+
+    .teacher-picker-modal .teacher-picker-input {
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    .teacher-picker-modal .teacher-picker-select {
+      width: 100%;
+      min-height: 220px;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+
+    .teacher-picker-modal .teacher-picker-actions {
+      margin-top: 12px;
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
   </style>
 </head>
 
@@ -569,6 +623,7 @@
       let lastResultRows = [];
       let lastResultHeaders = [];
       const registeringRows = new Set();
+      let teacherNamesCache = null;
 
       function setError(msg) {
         els.err.style.display = msg ? "block" : "none";
@@ -586,6 +641,144 @@
           .replaceAll(">", "&gt;")
           .replaceAll('"', "&quot;")
           .replaceAll("'", "&#039;");
+      }
+
+      function normalizeTeacherName(value) {
+        return String(value || "").trim();
+      }
+
+      function findExactTeacherName(sourceName, teacherNames) {
+        const cleanSource = normalizeTeacherName(sourceName);
+        return teacherNames.find((teacher) => normalizeTeacherName(teacher) === cleanSource) || null;
+      }
+
+      async function getTeacherNames() {
+        if (Array.isArray(teacherNamesCache)) {
+          return teacherNamesCache;
+        }
+
+        const { data, error } = await client
+          .from("teachers")
+          .select("name")
+          .order("name", { ascending: true });
+
+        if (error) {
+          throw new Error(`No se pudo cargar el listado de profesorado: ${error.message}`);
+        }
+
+        teacherNamesCache = (data || [])
+          .map((row) => normalizeTeacherName(row.name))
+          .filter(Boolean);
+
+        return teacherNamesCache;
+      }
+
+      function filterTeacherOptions(teacherNames, searchText) {
+        const cleanSearch = normalizeTeacherName(searchText);
+        if (!cleanSearch) {
+          return teacherNames.slice();
+        }
+
+        const exactNorm = normalizeForSort(cleanSearch);
+        const starts = [];
+        const contains = [];
+
+        teacherNames.forEach((name) => {
+          const normalized = normalizeForSort(name);
+          if (normalized.startsWith(exactNorm)) {
+            starts.push(name);
+          } else if (normalized.includes(exactNorm)) {
+            contains.push(name);
+          }
+        });
+
+        return [...starts, ...contains];
+      }
+
+      function showTeacherPickerModal(sourceName, teacherNames) {
+        return new Promise((resolve) => {
+          const backdrop = document.createElement("div");
+          backdrop.className = "teacher-picker-backdrop";
+          backdrop.innerHTML = `
+            <div class="teacher-picker-modal" role="dialog" aria-modal="true" aria-label="Seleccionar docente">
+              <h3>Seleccionar docente</h3>
+              <p>El nombre <b>${escapeHtml(sourceName)}</b> no coincide exactamente con <code>teachers</code>.</p>
+              <p>Selecciona el docente correcto para registrar la ausencia:</p>
+              <input class="teacher-picker-input" type="text" placeholder="Filtrar profesorado..." />
+              <select class="teacher-picker-select" size="10"></select>
+              <div class="teacher-picker-actions">
+                <button type="button" class="teacher-picker-cancel">Cancelar</button>
+                <button type="button" class="teacher-picker-confirm">Usar selección</button>
+              </div>
+            </div>
+          `;
+
+          const input = backdrop.querySelector(".teacher-picker-input");
+          const select = backdrop.querySelector(".teacher-picker-select");
+          const cancelBtn = backdrop.querySelector(".teacher-picker-cancel");
+          const confirmBtn = backdrop.querySelector(".teacher-picker-confirm");
+
+          const suggestions = filterTeacherOptions(teacherNames, sourceName);
+          let currentOptions = suggestions.length ? suggestions : teacherNames.slice();
+
+          const renderOptions = (items) => {
+            select.innerHTML = items.map((name) => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("");
+            if (select.options.length) {
+              select.selectedIndex = 0;
+            }
+          };
+
+          const close = (value) => {
+            backdrop.remove();
+            document.removeEventListener("keydown", onKeyDown);
+            resolve(value);
+          };
+
+          const onKeyDown = (event) => {
+            if (event.key === "Escape") {
+              close(null);
+            } else if (event.key === "Enter") {
+              event.preventDefault();
+              close(select.value || null);
+            }
+          };
+
+          input.addEventListener("input", () => {
+            currentOptions = filterTeacherOptions(teacherNames, input.value);
+            renderOptions(currentOptions);
+          });
+
+          select.addEventListener("dblclick", () => {
+            close(select.value || null);
+          });
+
+          cancelBtn.addEventListener("click", () => close(null));
+          confirmBtn.addEventListener("click", () => close(select.value || null));
+          backdrop.addEventListener("click", (event) => {
+            if (event.target === backdrop) {
+              close(null);
+            }
+          });
+
+          renderOptions(currentOptions);
+          document.body.appendChild(backdrop);
+          document.addEventListener("keydown", onKeyDown);
+          input.focus();
+          input.select();
+        });
+      }
+
+      async function resolveTeacherForAbsence(sourceTeacherName) {
+        const cleanTeacher = normalizeTeacherName(sourceTeacherName);
+        if (!cleanTeacher) return null;
+
+        const teacherNames = await getTeacherNames();
+        const exact = findExactTeacherName(cleanTeacher, teacherNames);
+        if (exact) {
+          return exact;
+        }
+
+        return showTeacherPickerModal(cleanTeacher, teacherNames);
       }
 
       function renderSummary(byDay) {
@@ -672,12 +865,15 @@
 
         const body = rows.map(r => {
           const hasAcceptAction = r.decision === "ACEPTAR" && r.lectiveDayISO && r.Nombre;
+          const hasForceApproveAction = r.decision.startsWith("FUERA") && r.lectiveDayISO && r.Nombre;
           const pill = r.decision === "ACEPTAR"
             ? (hasAcceptAction
               ? `<button type="button" class="pill ok pill-button js-accept-row" data-day="${escapeHtml(r.lectiveDayISO)}" data-teacher="${escapeHtml(r.Nombre)}">ACEPTAR</button>`
               : `<span class="pill ok">ACEPTAR</span>`)
             : r.decision.startsWith("FUERA")
-              ? `<span class="pill bad">${escapeHtml(r.decision)}</span>`
+              ? (hasForceApproveAction
+                ? `<button type="button" class="pill bad pill-button js-force-approve-row" data-day="${escapeHtml(r.lectiveDayISO)}" data-teacher="${escapeHtml(r.Nombre)}">Fuera de plazo. ¿Aprobar?</button>`
+                : `<span class="pill bad">${escapeHtml(r.decision)}</span>`)
               : r.decision.startsWith("LÍMITE")
               ? `<span class="pill bad">${escapeHtml(r.decision)}</span>`
               : r.decision.startsWith("YA APROBADA")
@@ -727,29 +923,53 @@
       });
 
       els.tableWrap.addEventListener("click", async (event) => {
-        const btn = event.target.closest(".js-accept-row");
+        const btn = event.target.closest(".js-accept-row, .js-force-approve-row");
         if (!btn) return;
 
         const dayISO = btn.dataset.day;
-        const teacherName = btn.dataset.teacher;
-        if (!dayISO || !teacherName) return;
+        const sourceTeacherName = btn.dataset.teacher;
+        if (!dayISO || !sourceTeacherName) return;
 
-        const key = `${teacherName}__${dayISO}`;
+        const key = `${sourceTeacherName}__${dayISO}`;
         if (registeringRows.has(key)) return;
-
-        const confirmMsg = `¿Registrar ausencia justificada para ${teacherName} el día ${dayISO}?`;
-        if (!confirm(confirmMsg)) return;
+        const isForceApprove = btn.classList.contains("js-force-approve-row");
 
         const originalText = btn.textContent;
         registeringRows.add(key);
         btn.disabled = true;
-        btn.textContent = "Guardando...";
+        btn.textContent = "Validando...";
         setError("");
-        setStatus("Registrando ausencias...", "warn");
+        setStatus("Validando docente...", "warn");
 
         try {
-          const result = await registerAbsenceForRow(dayISO, teacherName);
-          btn.textContent = `Registrado (${result.inserted})`;
+          const resolvedTeacherName = await resolveTeacherForAbsence(sourceTeacherName);
+          if (!resolvedTeacherName) {
+            btn.textContent = originalText;
+            btn.disabled = false;
+            setStatus("Registro cancelado", "");
+            return;
+          }
+
+          const teacherChanged = normalizeTeacherName(resolvedTeacherName) !== normalizeTeacherName(sourceTeacherName);
+          const confirmMsg = isForceApprove
+            ? (teacherChanged
+              ? `Esta solicitud está fuera de cupo. ¿Aprobar manualmente y registrar ausencia para ${resolvedTeacherName} (origen CSV: ${sourceTeacherName}) el día ${dayISO}?`
+              : `Esta solicitud está fuera de cupo. ¿Aprobar manualmente y registrar ausencia para ${resolvedTeacherName} el día ${dayISO}?`)
+            : (teacherChanged
+              ? `¿Registrar ausencia justificada para ${resolvedTeacherName} (origen CSV: ${sourceTeacherName}) el día ${dayISO}?`
+              : `¿Registrar ausencia justificada para ${resolvedTeacherName} el día ${dayISO}?`);
+
+          if (!confirm(confirmMsg)) {
+            btn.textContent = originalText;
+            btn.disabled = false;
+            setStatus("Registro cancelado", "");
+            return;
+          }
+
+          btn.textContent = "Guardando...";
+          setStatus("Registrando ausencias...", "warn");
+          const result = await registerAbsenceForRow(dayISO, resolvedTeacherName);
+          btn.textContent = isForceApprove ? `Aprobada (${result.inserted})` : `Registrado (${result.inserted})`;
           setStatus("Ausencias registradas", "ok");
         } catch (error) {
           btn.textContent = originalText;
