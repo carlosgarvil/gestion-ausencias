@@ -599,6 +599,16 @@ createApp({
       nextDate.setDate(nextDate.getDate() + dayOffset);
       this.listDate = toISODate(nextDate);
     },
+    changePanelDate(dayOffset) {
+      const baseDate = parseISODate(this.panelDate) || parseISODate(getTodayISO());
+      if (!baseDate) {
+        return;
+      }
+
+      const nextDate = new Date(baseDate);
+      nextDate.setDate(nextDate.getDate() + dayOffset);
+      this.panelDate = toISODate(nextDate);
+    },
     markDuplicateTeachers() {
       const teacherCount = {};
       // Contar cuántas ausencias tiene cada profesor
@@ -652,18 +662,31 @@ createApp({
       const dateObj = new Date(`${this.panelDate}T00:00:00`);
       const jsDay = dateObj.getDay(); // 0=Dom, 1=Lun ... 6=Sab
       const weekday = jsDay === 0 ? 7 : jsDay; // Convertir a 1=Lun ... 7=Dom
+      const weekdayLetterByValue = {
+        1: "L",
+        2: "M",
+        3: "X",
+        4: "J",
+        5: "V"
+      };
+      const weekdayLetter = weekdayLetterByValue[weekday];
 
       // Consultar profesorado de guardia desde timetable
       let guardEntries = [];
-      const { data: guardData, error: guardError } = await client
+      let guardQuery = client
         .from("timetable")
         .select("*")
         .ilike("subject", "Guardia%");
 
+      if (weekdayLetter) {
+        guardQuery = guardQuery.eq("weekday_letter", weekdayLetter);
+      }
+
+      const { data: guardData, error: guardError } = await guardQuery;
+
       if (guardError) {
         console.error("Error cargando guardias:", guardError);
       } else {
-        // Filtrar por día de la semana
         guardEntries = (guardData || []).filter((entry) => {
           const entryWeekday = this.normalizeWeekdayValue(entry);
           return entryWeekday === weekday;
@@ -1117,19 +1140,22 @@ createApp({
       });
 
       const slotGroups = new Map();
-      normalizedRows.forEach((row) => {
-        const slotKey = Number.isFinite(row.slotValue)
-          ? row.slotValue
-          : `null-${row.slotLabel}`;
+      const ensureSlotGroup = (slotValue, slotLabel) => {
+        const slotKey = Number.isFinite(slotValue)
+          ? slotValue
+          : `null-${slotLabel}`;
         if (!slotGroups.has(slotKey)) {
           slotGroups.set(slotKey, {
-            slotValue: row.slotValue,
-            slotLabel: row.slotLabel,
+            slotValue,
+            slotLabel,
             teachers: new Map()
           });
         }
+        return slotGroups.get(slotKey);
+      };
 
-        const slotEntry = slotGroups.get(slotKey);
+      normalizedRows.forEach((row) => {
+        const slotEntry = ensureSlotGroup(row.slotValue, row.slotLabel);
         const teacherKey = row.teacher || "—";
         if (!slotEntry.teachers.has(teacherKey)) {
           slotEntry.teachers.set(teacherKey, {
@@ -1146,6 +1172,14 @@ createApp({
         teacherEntry.classrooms.add(row.classroom);
       });
 
+      guardBySlot.forEach((guards, slotValue) => {
+        if (!guards.length || slotGroups.has(slotValue)) {
+          return;
+        }
+
+        ensureSlotGroup(slotValue, this.getSlotLabel(slotValue));
+      });
+
       const groupedRows = [];
       const sortedSlotEntries = Array.from(slotGroups.values()).sort((a, b) => {
         if (a.slotValue === null) return 1;
@@ -1158,13 +1192,21 @@ createApp({
         const teacherRows = Array.from(slotEntry.teachers.values()).sort((a, b) =>
           a.teacher.localeCompare(b.teacher)
         );
+        const visibleTeacherRows = teacherRows.length
+          ? teacherRows
+          : [{
+              teacher: "—",
+              groups: new Set(["—"]),
+              subjects: new Set(["—"]),
+              classrooms: new Set(["—"])
+            }];
 
         const guardTeachers = guardBySlot.has(slotEntry.slotValue)
           ? guardBySlot.get(slotEntry.slotValue)
           : [];
         const guestClassroomsHtml = buildGuestClassroomsHtml(slotEntry.slotValue);
 
-        teacherRows.forEach((teacherRow, index) => {
+        visibleTeacherRows.forEach((teacherRow, index) => {
           groupedRows.push({
             key: `${slotEntry.slotValue ?? slotEntry.slotLabel}-${teacherRow.teacher}-${index}`,
             slotValue: slotEntry.slotValue,
@@ -1173,7 +1215,7 @@ createApp({
               ? "panel-slot-even"
               : "panel-slot-odd",
             showSlotLabel: index === 0,
-            slotRowSpan: teacherRows.length,
+            slotRowSpan: visibleTeacherRows.length,
             group: Array.from(teacherRow.groups).join(", "),
             subject: Array.from(teacherRow.subjects).join(", "),
             classroom: Array.from(teacherRow.classrooms).join(", "),
