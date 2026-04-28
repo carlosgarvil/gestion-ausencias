@@ -60,114 +60,181 @@
       </nav>
 
       <section id="teachers-section">
-        <div class="teacher-schedule-header">
-          <div>
-            <h2>🏫 Panel semanal de aula huésped</h2>
+        <div class="guest-subsection-tabs" role="tablist" aria-label="Subsecciones de aula huésped">
+          <button type="button" role="tab" :aria-selected="activeGuestSubsection === 'config'"
+            :class="{ active: activeGuestSubsection === 'config' }" @click="activeGuestSubsection = 'config'">
+            Configuración
+          </button>
+          <button type="button" role="tab" :aria-selected="activeGuestSubsection === 'panel'"
+            :class="{ active: activeGuestSubsection === 'panel' }" @click="activeGuestSubsection = 'panel'">
+            Panel
+          </button>
+        </div>
+
+        <section v-if="activeGuestSubsection === 'config'" class="guest-subsection" aria-labelledby="guest-config-title">
+          <div class="teacher-schedule-header">
+            <div>
+              <h2 id="guest-config-title">Configuración</h2>
+              <p class="absence-meta">
+                Aulas activas marcadas como aula huésped.
+              </p>
+              <p v-if="guestActionMessage" class="schedule-edit-message" :class="guestActionMessageType">
+                {{ guestActionMessage }}
+              </p>
+            </div>
+          </div>
+
+          <div class="guest-participation-viewer">
+            <div class="guest-participation-header">
+              <h3>Participación del profesorado</h3>
+            </div>
+            <p v-if="loadingGuestParticipation" class="absence-meta">Cargando participación...</p>
+            <p v-else-if="guestParticipationMessage" class="absence-meta">{{ guestParticipationMessage }}</p>
+            <ul v-else class="guest-participation-list">
+              <li v-for="teacher in guestParticipationOptions" :key="teacher.email">
+                <span>{{ teacher.name }}</span>
+                <span class="guest-participation-count">({{ teacher.count }})</span>
+              </li>
+            </ul>
+          </div>
+
+          <details class="guest-classroom-manager">
+            <summary>Añadir grupo al aula huésped</summary>
+            <form class="guest-classroom-form" @submit.prevent="loadCandidateClasses">
+              <label>
+                Día
+                <select v-model.number="addGuestForm.weekday" @change="resetCandidateClasses" required>
+                  <option v-for="day in weekDays" :key="`add-day-${day.value}`" :value="day.value">
+                    {{ day.label }}
+                  </option>
+                </select>
+              </label>
+              <label>
+                Franja
+                <select v-model.number="addGuestForm.slot" @change="resetCandidateClasses" required>
+                  <option v-for="slot in slotOptions" :key="`add-slot-${slot.value}`" :value="slot.value">
+                    {{ slot.label }}
+                  </option>
+                </select>
+              </label>
+              <button type="submit" class="btn-refresh" :disabled="loadingCandidateClasses">
+                Cargar aulas candidatas
+              </button>
+            </form>
+
             <p class="absence-meta">
-              Aulas activas marcadas como aula huésped.
+              Pulsa una clase candidata para añadirla al cuadrante de aula huésped.
             </p>
-            <p v-if="guestActionMessage" class="schedule-edit-message" :class="guestActionMessageType">
-              {{ guestActionMessage }}
-            </p>
+            <p v-if="candidateClassMessage" class="absence-meta">{{ candidateClassMessage }}</p>
+            <div v-if="candidateClasses.length" class="guest-candidate-list">
+              <article v-for="(classInfo, idx) in candidateClasses" :key="`candidate-${classInfo.id || idx}`"
+                class="schedule-class guest-candidate-card"
+                :class="{ 'guest-classroom-card--saving': classInfo.saving }"
+                title="Pulsa para añadir esta clase al aula huésped"
+                @click="addClassToGuestClassroom(classInfo)">
+                <div>
+                  <p class="schedule-class-main">{{ classInfo.group || "Sin grupo" }}</p>
+                  <p class="schedule-class-meta">
+                    <span v-if="classInfo.subject">{{ classInfo.subject }}</span>
+                    <span v-if="classInfo.subject && classInfo.classroom"> · </span>
+                    <span v-if="classInfo.classroom">Aula: {{ classInfo.classroom }}</span>
+                  </p>
+                  <p v-if="classInfo.teacher" class="schedule-class-meta">{{ classInfo.teacher }}</p>
+                </div>
+                <span v-if="classInfo.saving" class="schedule-badge">Guardando</span>
+              </article>
+            </div>
+          </details>
+
+          <div class="guest-classroom-summary" v-if="!loadingGuestClassrooms && !guestClassroomMessage">
+            <span><strong>{{ activeClassroomCount }}</strong> aulas</span>
+            <span><strong>{{ guestEntryCount }}</strong> clases</span>
           </div>
-          <div class="teacher-schedule-controls">
-            <button type="button" class="btn-refresh" @click="loadGuestClassrooms" :disabled="loadingGuestClassrooms">
-              Actualizar
+
+          <div class="teacher-schedule-content">
+            <p v-if="loadingGuestClassrooms" class="absence-meta">Cargando aulas huésped…</p>
+            <p v-else-if="guestClassroomMessage" class="absence-meta">{{ guestClassroomMessage }}</p>
+            <div v-else class="teacher-schedule-grid">
+              <table class="schedule-table guest-classroom-table">
+                <thead>
+                  <tr>
+                    <th>Franja</th>
+                    <th v-for="day in weekDays" :key="`day-${day.value}`">{{ day.label }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="row in guestClassroomGrid" :key="`slot-${row.slotValue}`">
+                    <th>{{ row.slotLabel }}</th>
+                    <td v-for="(cell, index) in row.days" :key="`cell-${row.slotValue}-${index}`">
+                      <div v-if="cell.length" class="schedule-cell">
+                        <article v-for="(classInfo, idx) in cell" :key="`guest-${row.slotValue}-${index}-${idx}`"
+                          class="schedule-class guest-classroom-card"
+                          :class="{ 'guest-classroom-card--saving': classInfo.saving }"
+                          title="Pulsa para quitar esta clase de aula huésped"
+                          @click="unmarkGuestClassroom(classInfo)">
+                          <p class="schedule-class-main">{{ classInfo.classroom }}</p>
+                          <p v-if="classInfo.teacher" class="schedule-class-meta">{{ classInfo.teacher }}</p>
+                          <p class="schedule-class-meta guest-panel-class-detail">
+                            <span v-if="classInfo.group">{{ classInfo.group }}</span>
+                            <span v-if="classInfo.group && classInfo.subject"> · </span>
+                            <span v-if="classInfo.subject">{{ classInfo.subject }}</span>
+                          </p>
+                          <span v-if="classInfo.saving" class="schedule-badge">Guardando</span>
+                        </article>
+                      </div>
+                      <div v-else class="schedule-cell schedule-cell--empty">-</div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section v-else class="guest-subsection" aria-labelledby="guest-panel-title">
+          <div class="guest-panel-header">
+            <h2 id="guest-panel-title">Panel</h2>
+            <button type="button" class="btn-refresh guest-print-button" @click="printGuestPanel">
+              Imprimir
             </button>
           </div>
-        </div>
-
-        <details class="guest-classroom-manager">
-          <summary>Añadir grupo al aula huésped</summary>
-          <form class="guest-classroom-form" @submit.prevent="loadCandidateClasses">
-            <label>
-              Día
-              <select v-model.number="addGuestForm.weekday" @change="resetCandidateClasses" required>
-                <option v-for="day in weekDays" :key="`add-day-${day.value}`" :value="day.value">
-                  {{ day.label }}
-                </option>
-              </select>
-            </label>
-            <label>
-              Franja
-              <select v-model.number="addGuestForm.slot" @change="resetCandidateClasses" required>
-                <option v-for="slot in slotOptions" :key="`add-slot-${slot.value}`" :value="slot.value">
-                  {{ slot.label }}
-                </option>
-              </select>
-            </label>
-            <button type="submit" class="btn-refresh" :disabled="loadingCandidateClasses">
-              Cargar aulas candidatas
-            </button>
-          </form>
-
-          <p class="absence-meta">
-            Pulsa una clase candidata para añadirla al cuadrante de aula huésped.
-          </p>
-          <p v-if="candidateClassMessage" class="absence-meta">{{ candidateClassMessage }}</p>
-          <div v-if="candidateClasses.length" class="guest-candidate-list">
-            <article v-for="(classInfo, idx) in candidateClasses" :key="`candidate-${classInfo.id || idx}`"
-              class="schedule-class guest-candidate-card"
-              :class="{ 'guest-classroom-card--saving': classInfo.saving }"
-              title="Pulsa para añadir esta clase al aula huésped"
-              @click="addClassToGuestClassroom(classInfo)">
-              <div>
-                <p class="schedule-class-main">{{ classInfo.group || "Sin grupo" }}</p>
-                <p class="schedule-class-meta">
-                  <span v-if="classInfo.subject">{{ classInfo.subject }}</span>
-                  <span v-if="classInfo.subject && classInfo.classroom"> · </span>
-                  <span v-if="classInfo.classroom">Aula: {{ classInfo.classroom }}</span>
-                </p>
-                <p v-if="classInfo.teacher" class="schedule-class-meta">{{ classInfo.teacher }}</p>
-              </div>
-              <span v-if="classInfo.saving" class="schedule-badge">Guardando</span>
-            </article>
+          <div class="teacher-schedule-content guest-panel-print-area">
+            <p v-if="loadingGuestClassrooms" class="absence-meta">Cargando aulas huésped...</p>
+            <p v-else-if="guestClassroomMessage" class="absence-meta">{{ guestClassroomMessage }}</p>
+            <div v-else class="teacher-schedule-grid">
+              <table class="schedule-table guest-classroom-table">
+                <thead>
+                  <tr>
+                    <th>Franja</th>
+                    <th v-for="day in weekDays" :key="`panel-day-${day.value}`">{{ day.label }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="row in guestPanelGrid" :key="`panel-slot-${row.slotValue}`">
+                    <th>{{ row.slotLabel }}</th>
+                    <td v-for="(cell, index) in row.days" :key="`panel-cell-${row.slotValue}-${index}`">
+                      <div v-if="cell.length" class="schedule-cell">
+                        <article v-for="(classInfo, idx) in cell" :key="`panel-guest-${row.slotValue}-${index}-${idx}`"
+                          class="schedule-class guest-panel-card">
+                          <p class="schedule-class-main">{{ classInfo.classroom }}</p>
+                          <p v-if="classInfo.teacher" class="schedule-class-meta">
+                            {{ classInfo.teacher }} ({{ getGuestParticipationCountForTeacher(classInfo.teacher) }})
+                          </p>
+                          <p class="schedule-class-meta">
+                            <span v-if="classInfo.group">{{ classInfo.group }}</span>
+                            <span v-if="classInfo.group && classInfo.subject"> · </span>
+                            <span v-if="classInfo.subject">{{ classInfo.subject }}</span>
+                          </p>
+                        </article>
+                      </div>
+                      <div v-else class="schedule-cell schedule-cell--empty">-</div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-        </details>
-
-        <div class="guest-classroom-summary" v-if="!loadingGuestClassrooms && !guestClassroomMessage">
-          <span><strong>{{ activeClassroomCount }}</strong> aulas</span>
-          <span><strong>{{ guestEntryCount }}</strong> clases</span>
-        </div>
-
-        <div class="teacher-schedule-content">
-          <p v-if="loadingGuestClassrooms" class="absence-meta">Cargando aulas huésped…</p>
-          <p v-else-if="guestClassroomMessage" class="absence-meta">{{ guestClassroomMessage }}</p>
-          <div v-else class="teacher-schedule-grid">
-            <table class="schedule-table guest-classroom-table">
-              <thead>
-                <tr>
-                  <th>Franja</th>
-                  <th v-for="day in weekDays" :key="`day-${day.value}`">{{ day.label }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="row in guestClassroomGrid" :key="`slot-${row.slotValue}`">
-                  <th>{{ row.slotLabel }}</th>
-                  <td v-for="(cell, index) in row.days" :key="`cell-${row.slotValue}-${index}`">
-                    <div v-if="cell.length" class="schedule-cell">
-                      <article v-for="(classInfo, idx) in cell" :key="`guest-${row.slotValue}-${index}-${idx}`"
-                        class="schedule-class guest-classroom-card"
-                        :class="{ 'guest-classroom-card--saving': classInfo.saving }"
-                        title="Pulsa para quitar esta clase de aula huésped"
-                        @click="unmarkGuestClassroom(classInfo)">
-                        <p class="schedule-class-main">{{ classInfo.classroom }}</p>
-                        <p v-if="classInfo.teacher" class="schedule-class-meta">{{ classInfo.teacher }}</p>
-                        <p class="schedule-class-meta">
-                          <span v-if="classInfo.group">{{ classInfo.group }}</span>
-                          <span v-if="classInfo.group && classInfo.subject"> · </span>
-                          <span v-if="classInfo.subject">{{ classInfo.subject }}</span>
-                        </p>
-                        <span v-if="classInfo.saving" class="schedule-badge">Guardando</span>
-                      </article>
-                    </div>
-                    <div v-else class="schedule-cell schedule-cell--empty">-</div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        </section>
       </section>
     </section>
   </div>
@@ -210,12 +277,18 @@
           },
           loginMessage: "",
           loginMessageType: "",
+          activeGuestSubsection: "config",
           loadingGuestClassrooms: false,
           guestClassroomMessage: "",
           guestActionMessage: "",
           guestActionMessageType: "",
           guestClassroomGrid: this.buildEmptyGuestClassroomGrid(),
           rawGuestClassroomEntries: [],
+          loadingGuestParticipation: false,
+          guestParticipationMessage: "",
+          guestParticipationOptions: [],
+          guestParticipationCountsByTeacher: {},
+          guestPanelTieBreakers: {},
           addGuestForm: {
             weekday: WEEK_DAYS[0].value,
             slot: SLOT_OPTIONS[0].value
@@ -238,6 +311,19 @@
         },
         guestEntryCount() {
           return this.rawGuestClassroomEntries.length;
+        },
+        guestPanelGrid() {
+          return this.guestClassroomGrid.map((row) => ({
+            ...row,
+            days: row.days.map((cell) =>
+              [...cell].sort((a, b) => {
+                const aWeight = this.getGuestParticipationCountForTeacher(a.teacher);
+                const bWeight = this.getGuestParticipationCountForTeacher(b.teacher);
+                if (aWeight !== bWeight) return aWeight - bWeight;
+                return this.getGuestPanelTieBreaker(a) - this.getGuestPanelTieBreaker(b);
+              })
+            )
+          }));
         }
       },
       mounted() {
@@ -269,6 +355,7 @@
           this.isLoggedIn = true;
           this.userEmail = user.email || "";
           this.loadGuestClassrooms();
+          this.loadGuestParticipation();
         },
         resetState() {
           this.isLoggedIn = false;
@@ -280,6 +367,11 @@
           this.guestActionMessageType = "";
           this.guestClassroomGrid = this.buildEmptyGuestClassroomGrid();
           this.rawGuestClassroomEntries = [];
+          this.loadingGuestParticipation = false;
+          this.guestParticipationMessage = "";
+          this.guestParticipationOptions = [];
+          this.guestParticipationCountsByTeacher = {};
+          this.guestPanelTieBreakers = {};
           this.loadingCandidateClasses = false;
           this.candidateClassMessage = "";
           this.candidateClasses = [];
@@ -304,6 +396,20 @@
         async handleLogout() {
           await client.auth.signOut();
           this.resetState();
+        },
+        printGuestPanel() {
+          document.body.classList.add("printing-guest-panel");
+          const cleanupPrintClass = () => {
+            document.body.classList.remove("printing-guest-panel");
+          };
+          window.addEventListener("afterprint", cleanupPrintClass, { once: true });
+          window.print();
+          setTimeout(cleanupPrintClass, 1000);
+        },
+        normalizeEmail(value) {
+          const raw = String(value || "").trim().toLowerCase();
+          const match = raw.match(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/);
+          return match ? match[0] : raw;
         },
         parseWeekday(value) {
           if (value === null || value === undefined) return null;
@@ -422,6 +528,146 @@
               .filter(Boolean)
           );
         },
+        async loadGuestParticipation() {
+          this.loadingGuestParticipation = true;
+          this.guestParticipationMessage = "";
+
+          try {
+            console.group("[aula_huesped] Participación profesorado");
+            const { data: participationRows, error: participationError } = await client
+              .from("guest_class_teacher_participation")
+              .select("teacher_email_form, submitted_at")
+              .order("submitted_at", { ascending: false });
+
+            if (participationError) throw participationError;
+            console.log("Filas participación recibidas:", participationRows?.length || 0);
+
+            const participationByEmail = new Map();
+            (participationRows || []).forEach((row) => {
+              const email = this.normalizeEmail(row.teacher_email_form);
+              if (!email) return;
+
+              const current = participationByEmail.get(email) || {
+                email,
+                count: 0,
+                firstSubmittedAt: row.submitted_at,
+                lastSubmittedAt: row.submitted_at
+              };
+              current.count += 1;
+
+              if (row.submitted_at) {
+                if (!current.lastSubmittedAt || new Date(row.submitted_at) > new Date(current.lastSubmittedAt)) {
+                  current.lastSubmittedAt = row.submitted_at;
+                }
+                if (!current.firstSubmittedAt || new Date(row.submitted_at) < new Date(current.firstSubmittedAt)) {
+                  current.firstSubmittedAt = row.submitted_at;
+                }
+              }
+
+              participationByEmail.set(email, current);
+            });
+            console.table(
+              Array.from(participationByEmail.values()).slice(0, 15).map((entry) => ({
+                email_normalizado: entry.email,
+                participaciones: entry.count
+              }))
+            );
+
+            if (!participationByEmail.size) {
+              this.guestParticipationOptions = [];
+              this.guestParticipationCountsByTeacher = {};
+              this.guestParticipationMessage = "No hay participaciones registradas.";
+              return;
+            }
+
+            let { data: teachers, error: teachersError } = await client
+              .from("teachers")
+              .select("name, email, email_form");
+
+            if (teachersError) {
+              console.warn("No se pudo leer teachers.email_form; reintentando solo con name,email:", teachersError);
+              const fallbackTeachersResult = await client
+                .from("teachers")
+                .select("name, email");
+              teachers = fallbackTeachersResult.data;
+              teachersError = fallbackTeachersResult.error;
+            }
+
+            if (teachersError) throw teachersError;
+            console.log("Filas teachers recibidas:", teachers?.length || 0);
+            console.table(
+              (teachers || []).slice(0, 15).map((teacher) => ({
+                name: teacher.name,
+                email: this.normalizeEmail(teacher.email),
+                email_form: this.normalizeEmail(teacher.email_form)
+              }))
+            );
+
+            const options = (teachers || [])
+              .map((teacher) => {
+                const email = this.normalizeEmail(teacher.email);
+                const formEmail = this.normalizeEmail(teacher.email_form);
+                const participation = participationByEmail.get(email);
+                const formParticipation = participationByEmail.get(formEmail);
+                const matchedParticipation = participation || formParticipation;
+                if (!matchedParticipation) return null;
+
+                return {
+                  ...matchedParticipation,
+                  email: email || formEmail || matchedParticipation.email,
+                  name: teacher.name || matchedParticipation.email
+                };
+              })
+              .filter(Boolean)
+              .sort((a, b) => {
+                if (b.count !== a.count) return b.count - a.count;
+                return String(a.name).localeCompare(String(b.name), "es");
+              });
+
+            this.guestParticipationOptions = options;
+            this.guestParticipationCountsByTeacher = options.reduce((countsByTeacher, teacher) => {
+              const teacherKey = this.normalizeTeacherName(teacher.name);
+              if (teacherKey) {
+                countsByTeacher[teacherKey] = (countsByTeacher[teacherKey] || 0) + teacher.count;
+              }
+              return countsByTeacher;
+            }, {});
+            console.log("Coincidencias encontradas:", options.length);
+            console.table(
+              options.slice(0, 30).map((teacher) => ({
+                name: teacher.name,
+                email: teacher.email,
+                participaciones: teacher.count
+              }))
+            );
+
+            if (!options.length) {
+              this.guestParticipationCountsByTeacher = {};
+              const teacherEmails = new Set(
+                (teachers || [])
+                  .flatMap((teacher) => [
+                    this.normalizeEmail(teacher.email),
+                    this.normalizeEmail(teacher.email_form)
+                  ])
+                  .filter(Boolean)
+              );
+              const unmatchedParticipationEmails = Array.from(participationByEmail.keys())
+                .filter((email) => !teacherEmails.has(email))
+                .slice(0, 20);
+              console.warn("Participaciones sin coincidencia en teachers:", unmatchedParticipationEmails);
+              this.guestParticipationMessage = "No hay participaciones con correo coincidente en la tabla teachers.";
+              return;
+            }
+          } catch (error) {
+            console.error("Error cargando participación en aula huésped:", error);
+            this.guestParticipationOptions = [];
+            this.guestParticipationCountsByTeacher = {};
+            this.guestParticipationMessage = "No se pudo cargar la participación: " + error.message;
+          } finally {
+            console.groupEnd();
+            this.loadingGuestParticipation = false;
+          }
+        },
         normalizeTimetableEntry(entry) {
           return {
             id: this.getTimetableEntryId(entry),
@@ -434,6 +680,25 @@
             saving: false,
             original: entry
           };
+        },
+        getGuestParticipationCountForTeacher(teacherName) {
+          const teacherKey = this.normalizeTeacherName(teacherName);
+          return this.guestParticipationCountsByTeacher[teacherKey] || 0;
+        },
+        getGuestPanelTieBreaker(classInfo) {
+          const key = [
+            classInfo.id,
+            classInfo.weekdayValue,
+            classInfo.slotValue,
+            classInfo.classroom,
+            classInfo.teacher,
+            classInfo.group,
+            classInfo.subject
+          ].join("|");
+          if (this.guestPanelTieBreakers[key] === undefined) {
+            this.guestPanelTieBreakers[key] = Math.random();
+          }
+          return this.guestPanelTieBreakers[key];
         },
         getTimetableEntryId(entry) {
           const candidates = [entry.id, entry.timetable_id, entry.uuid];
@@ -692,6 +957,7 @@
           });
 
           this.rawGuestClassroomEntries = activeEntries;
+          this.guestPanelTieBreakers = {};
           this.guestClassroomGrid = this.mapEntriesToGuestClassroomGrid(activeEntries);
           this.guestClassroomMessage = activeEntries.length
             ? ""
