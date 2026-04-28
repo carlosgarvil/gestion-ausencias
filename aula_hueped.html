@@ -69,6 +69,10 @@
             :class="{ active: activeGuestSubsection === 'panel' }" @click="activeGuestSubsection = 'panel'">
             Panel
           </button>
+          <button type="button" role="tab" :aria-selected="activeGuestSubsection === 'printPanel'"
+            :class="{ active: activeGuestSubsection === 'printPanel' }" @click="activeGuestSubsection = 'printPanel'">
+            Panel impresión
+          </button>
         </div>
 
         <section v-if="activeGuestSubsection === 'config'" class="guest-subsection" aria-labelledby="guest-config-title">
@@ -84,10 +88,8 @@
             </div>
           </div>
 
-          <div class="guest-participation-viewer">
-            <div class="guest-participation-header">
-              <h3>Participación del profesorado</h3>
-            </div>
+          <details class="guest-participation-viewer guest-classroom-manager">
+            <summary>Participación del profesorado</summary>
             <p v-if="loadingGuestParticipation" class="absence-meta">Cargando participación...</p>
             <p v-else-if="guestParticipationMessage" class="absence-meta">{{ guestParticipationMessage }}</p>
             <ul v-else class="guest-participation-list">
@@ -96,7 +98,7 @@
                 <span class="guest-participation-count">({{ teacher.count }})</span>
               </li>
             </ul>
-          </div>
+          </details>
 
           <details class="guest-classroom-manager">
             <summary>Añadir grupo al aula huésped</summary>
@@ -191,7 +193,8 @@
           </div>
         </section>
 
-        <section v-else class="guest-subsection" aria-labelledby="guest-panel-title">
+        <section v-else-if="activeGuestSubsection === 'panel'" class="guest-subsection"
+          aria-labelledby="guest-panel-title">
           <div class="guest-panel-header">
             <h2 id="guest-panel-title">Panel</h2>
             <button type="button" class="btn-refresh guest-print-button" @click="printGuestPanel">
@@ -217,15 +220,54 @@
                         <article v-for="(classInfo, idx) in cell" :key="`panel-guest-${row.slotValue}-${index}-${idx}`"
                           class="schedule-class guest-panel-card">
                           <p class="schedule-class-main">{{ classInfo.classroom }}</p>
-                          <p v-if="classInfo.teacher" class="schedule-class-meta">
+                          <p v-if="classInfo.teacher" class="schedule-class-meta"
+                            :class="{ 'guest-panel-teacher--absent': isGuestPanelTeacherAbsent(classInfo) }">
                             {{ classInfo.teacher }} ({{ getGuestParticipationCountForTeacher(classInfo.teacher) }})
                           </p>
-                          <p class="schedule-class-meta">
+                          <p class="schedule-class-meta guest-panel-class-detail"
+                            :class="{ 'guest-panel-teacher--absent': isGuestPanelTeacherAbsent(classInfo) }">
                             <span v-if="classInfo.group">{{ classInfo.group }}</span>
                             <span v-if="classInfo.group && classInfo.subject"> · </span>
                             <span v-if="classInfo.subject">{{ classInfo.subject }}</span>
                           </p>
                         </article>
+                      </div>
+                      <div v-else class="schedule-cell schedule-cell--empty">-</div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section v-else class="guest-subsection" aria-labelledby="guest-print-panel-title">
+          <div class="guest-panel-header">
+            <h2 id="guest-print-panel-title">Panel impresión</h2>
+            <button type="button" class="btn-refresh guest-print-button" @click="printGuestPanel">
+              Imprimir
+            </button>
+          </div>
+          <div class="teacher-schedule-content guest-panel-print-area">
+            <p v-if="loadingGuestClassrooms" class="absence-meta">Cargando aulas huésped...</p>
+            <p v-else-if="guestClassroomMessage" class="absence-meta">{{ guestClassroomMessage }}</p>
+            <div v-else class="teacher-schedule-grid">
+              <table class="schedule-table guest-classroom-table guest-print-panel-table">
+                <thead>
+                  <tr>
+                    <th>Franja</th>
+                    <th v-for="day in weekDays" :key="`print-panel-day-${day.value}`">{{ day.label }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="row in guestPanelGrid" :key="`print-panel-slot-${row.slotValue}`">
+                    <th>{{ row.slotLabel }}</th>
+                    <td v-for="(cell, index) in row.days" :key="`print-panel-cell-${row.slotValue}-${index}`">
+                      <div v-if="cell.length" class="guest-print-lines">
+                        <p v-for="(classInfo, idx) in cell"
+                          :key="`print-panel-guest-${row.slotValue}-${index}-${idx}`" class="guest-print-line">
+                          <strong>{{ classInfo.classroom }}</strong>: {{ classInfo.group || "Sin grupo" }}
+                        </p>
                       </div>
                       <div v-else class="schedule-cell schedule-cell--empty">-</div>
                     </td>
@@ -289,6 +331,8 @@
           guestParticipationOptions: [],
           guestParticipationCountsByTeacher: {},
           guestPanelTieBreakers: {},
+          guestAbsencesTodayByTeacher: new Map(),
+          guestAbsencesToday: [],
           addGuestForm: {
             weekday: WEEK_DAYS[0].value,
             slot: SLOT_OPTIONS[0].value
@@ -356,6 +400,7 @@
           this.userEmail = user.email || "";
           this.loadGuestClassrooms();
           this.loadGuestParticipation();
+          this.loadGuestAbsencesToday();
         },
         resetState() {
           this.isLoggedIn = false;
@@ -372,6 +417,8 @@
           this.guestParticipationOptions = [];
           this.guestParticipationCountsByTeacher = {};
           this.guestPanelTieBreakers = {};
+          this.guestAbsencesTodayByTeacher = new Map();
+          this.guestAbsencesToday = [];
           this.loadingCandidateClasses = false;
           this.candidateClassMessage = "";
           this.candidateClasses = [];
@@ -506,7 +553,101 @@
           return Boolean(value);
         },
         normalizeTeacherName(value) {
-          return String(value || "").trim().toLowerCase();
+          return String(value || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .replace(/[.,;:()]/g, " ")
+            .toLowerCase()
+            .replace(/\s+/g, " ")
+            .trim();
+        },
+        getTeacherNameTokens(value) {
+          return this.normalizeTeacherName(value)
+            .split(" ")
+            .filter((token) => token.length > 2);
+        },
+        areTeacherNamesEquivalent(left, right) {
+          const leftKey = this.normalizeTeacherName(left);
+          const rightKey = this.normalizeTeacherName(right);
+          if (!leftKey || !rightKey) return false;
+          if (leftKey === rightKey) return true;
+          if (leftKey.includes(rightKey) || rightKey.includes(leftKey)) return true;
+
+          const rightTokens = new Set(this.getTeacherNameTokens(right));
+          const sharedTokenCount = this.getTeacherNameTokens(left)
+            .filter((token) => rightTokens.has(token))
+            .length;
+          return sharedTokenCount >= 2;
+        },
+        getTodayISODate() {
+          const today = new Date();
+          const year = today.getFullYear();
+          const month = String(today.getMonth() + 1).padStart(2, "0");
+          const day = String(today.getDate()).padStart(2, "0");
+          return `${year}-${month}-${day}`;
+        },
+        getTodayWeekdayValue() {
+          const jsDay = new Date().getDay();
+          return jsDay === 0 ? 7 : jsDay;
+        },
+        async loadGuestAbsencesToday() {
+          const todayISO = this.getTodayISODate();
+          const { data, error } = await client
+            .from("absences")
+            .select("teacher_name, start_slot, end_slot")
+            .eq("date", todayISO);
+
+          if (error) {
+            console.error("Error cargando ausencias de hoy para aula huésped:", error);
+            this.guestAbsencesTodayByTeacher = new Map();
+            this.guestAbsencesToday = [];
+            return;
+          }
+
+          const grouped = new Map();
+          const absences = (data || [])
+            .map((row) => ({
+              teacherName: row.teacher_name || "",
+              teacherKey: this.normalizeTeacherName(row.teacher_name),
+              startSlot: Number(row.start_slot),
+              endSlot: Number(row.end_slot)
+            }))
+            .filter((absence) => absence.teacherKey);
+
+          absences.forEach((absence) => {
+            const teacherKey = absence.teacherKey;
+            if (!grouped.has(teacherKey)) grouped.set(teacherKey, []);
+            grouped.get(teacherKey).push({
+              teacherName: absence.teacherName,
+              startSlot: absence.startSlot,
+              endSlot: absence.endSlot
+            });
+          });
+          this.guestAbsencesToday = absences;
+          this.guestAbsencesTodayByTeacher = grouped;
+        },
+        isSlotCoveredByAbsence(absence, slotValue) {
+          if (!Number.isFinite(absence.startSlot) || !Number.isFinite(absence.endSlot)) return true;
+          return slotValue >= absence.startSlot && slotValue <= absence.endSlot;
+        },
+        isGuestPanelTeacherAbsent(classInfo) {
+          if (!classInfo || classInfo.weekdayValue !== this.getTodayWeekdayValue()) return false;
+          const slotValue = Number(classInfo.slotValue);
+          if (!Number.isFinite(slotValue)) return false;
+
+          const teacherKey = this.normalizeTeacherName(classInfo.teacher);
+          if (!teacherKey) return false;
+
+          const directRanges = this.guestAbsencesTodayByTeacher.get(teacherKey) || [];
+          if (directRanges.some((range) => this.isSlotCoveredByAbsence(range, slotValue))) {
+            return true;
+          }
+
+          return this.guestAbsencesToday.some(
+            (absence) =>
+              this.areTeacherNamesEquivalent(classInfo.teacher, absence.teacherName) &&
+              this.isSlotCoveredByAbsence(absence, slotValue)
+          );
         },
         isTeacherInactiveForPanel(teacherName, inactiveTeacherKeys) {
           const teacherKey = this.normalizeTeacherName(teacherName);
@@ -533,14 +674,12 @@
           this.guestParticipationMessage = "";
 
           try {
-            console.group("[aula_huesped] Participación profesorado");
             const { data: participationRows, error: participationError } = await client
               .from("guest_class_teacher_participation")
               .select("teacher_email_form, submitted_at")
               .order("submitted_at", { ascending: false });
 
             if (participationError) throw participationError;
-            console.log("Filas participación recibidas:", participationRows?.length || 0);
 
             const participationByEmail = new Map();
             (participationRows || []).forEach((row) => {
@@ -566,12 +705,6 @@
 
               participationByEmail.set(email, current);
             });
-            console.table(
-              Array.from(participationByEmail.values()).slice(0, 15).map((entry) => ({
-                email_normalizado: entry.email,
-                participaciones: entry.count
-              }))
-            );
 
             if (!participationByEmail.size) {
               this.guestParticipationOptions = [];
@@ -594,14 +727,6 @@
             }
 
             if (teachersError) throw teachersError;
-            console.log("Filas teachers recibidas:", teachers?.length || 0);
-            console.table(
-              (teachers || []).slice(0, 15).map((teacher) => ({
-                name: teacher.name,
-                email: this.normalizeEmail(teacher.email),
-                email_form: this.normalizeEmail(teacher.email_form)
-              }))
-            );
 
             const options = (teachers || [])
               .map((teacher) => {
@@ -632,14 +757,6 @@
               }
               return countsByTeacher;
             }, {});
-            console.log("Coincidencias encontradas:", options.length);
-            console.table(
-              options.slice(0, 30).map((teacher) => ({
-                name: teacher.name,
-                email: teacher.email,
-                participaciones: teacher.count
-              }))
-            );
 
             if (!options.length) {
               this.guestParticipationCountsByTeacher = {};
@@ -664,7 +781,6 @@
             this.guestParticipationCountsByTeacher = {};
             this.guestParticipationMessage = "No se pudo cargar la participación: " + error.message;
           } finally {
-            console.groupEnd();
             this.loadingGuestParticipation = false;
           }
         },
@@ -819,30 +935,6 @@
               raw: entry,
               normalized: this.normalizeTimetableEntry(entry)
             }));
-
-            console.log("[aula_huesped] loadCandidateClasses", {
-              selectedWeekday,
-              selectedWeekdayLetter,
-              selectedSlot,
-              rowsReturned: rawEntries.length,
-              candidateMatches: matchingDaySlot.length
-            });
-
-            console.log("[aula_huesped] matchingDaySlot sample", matchingDaySlot.map(({ raw, normalized }) => ({
-              id: normalized.id,
-              teacherRaw: raw.teacher_name,
-              teacherNormalized: normalized.teacher,
-              groupRaw: raw.group_name,
-              groupNormalized: normalized.group,
-              classroomRaw: raw.classroom,
-              classroomNormalized: normalized.classroom,
-              weekdayLetterRaw: raw.weekday_letter,
-              weekdayValue: normalized.weekdayValue,
-              slotRaw: raw.slot,
-              slotValue: normalized.slotValue,
-              aulaHuespedRaw: raw.aula_huesped,
-              aulaHuespedInterpreted: this.isTimetableAulaHuesped(raw)
-            })));
 
             const candidates = matchingDaySlot
               .map(({ normalized }) => normalized)

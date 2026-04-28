@@ -1133,6 +1133,36 @@ table tbody tr:hover td {
   cursor: default;
 }
 
+.guest-panel-teacher--absent {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.guest-print-panel-table {
+  font-size: 0.82rem;
+}
+
+.guest-print-panel-table th:first-child {
+  min-width: 96px;
+}
+
+.guest-print-panel-table td {
+  min-width: 140px;
+  vertical-align: top;
+}
+
+.guest-print-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.guest-print-line {
+  margin: 0;
+  line-height: 1.2;
+  color: #1f2a37;
+}
+
 .guest-classroom-card--saving {
   opacity: 0.72;
   pointer-events: none;
@@ -1398,6 +1428,19 @@ table tbody tr:hover td {
 
   body.printing-guest-panel .guest-panel-class-detail {
     display: none;
+  }
+
+  body.printing-guest-panel .guest-print-panel-table {
+    font-size: 9px;
+  }
+
+  body.printing-guest-panel .guest-print-panel-table th,
+  body.printing-guest-panel .guest-print-panel-table td {
+    padding: 3px 4px;
+  }
+
+  body.printing-guest-panel .guest-print-line {
+    line-height: 1.12;
   }
 
   #app>h1,
