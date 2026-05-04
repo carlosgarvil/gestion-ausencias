@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 
 <head>
@@ -17,7 +17,7 @@
 
 <body>
   <div id="app">
-    <h1>Gestión de ausencias del profesorado</h1>
+    <h1><img class="app-title-logo" src="img/Logo IES P Sur 2023.jpg" alt="IES Polígono Sur" /> <span>Gestión de ausencias del profesorado</span></h1>
 
     <section id="login-section" v-if="!isLoggedIn">
       <h2>Acceso</h2>
@@ -154,7 +154,7 @@
           </div>
 
           <div class="teacher-schedule-content">
-            <p v-if="loadingGuestClassrooms" class="absence-meta">Cargando aulas huésped…</p>
+            <p v-if="loadingGuestClassrooms" class="absence-meta">Cargando aulas huésped...</p>
             <p v-else-if="guestClassroomMessage" class="absence-meta">{{ guestClassroomMessage }}</p>
             <div v-else class="teacher-schedule-grid">
               <table class="schedule-table guest-classroom-table">
@@ -283,6 +283,7 @@
 
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="nav.js"></script>
   <script>
     const { createApp } = Vue;
     const { createClient } = supabase;

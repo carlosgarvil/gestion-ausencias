@@ -1,4 +1,4 @@
-<!-- TODO: esta página debe servir para mostrar las tareas de cada grupo según las ausencias del día actual. Mostrará una tabla con las tareas en primera columna. Las tareas se encuentran en la columnas tasks de la tabla absences. La segunda columna para el grupo (group_name) junto con el aula (classroom) y la tercera columna para la franja horaria donde ese grupo tiene la ausencia. Como idea, puedes coger panel.html porque será una modificación de ese archivo. -->
+<!-- TODO: esta página debe servir para mostrar las tareas de cada grupo según las ausencias del día actual. Mostrará una tabla con las tareas en primera columna. Las tareas se encuentran en la columna tasks de la tabla absences. La segunda columna para el grupo (group_name) junto con el aula (classroom) y la tercera columna para la franja horaria donde ese grupo tiene la ausencia. Como idea, puedes coger panel.html porque será una modificación de ese archivo. -->
 
 <!DOCTYPE html>
 <html lang="es">
@@ -19,7 +19,7 @@
 
 <body>
   <div id="app">
-    <h1>Gestión de ausencias del profesorado</h1>
+    <h1><img class="app-title-logo" src="img/Logo IES P Sur 2023.jpg" alt="IES Polígono Sur" /> <span>Gestión de ausencias del profesorado</span></h1>
 
     <section id="login-section" v-if="!isLoggedIn">
       <h2>Acceso</h2>
@@ -36,6 +36,7 @@
         <div v-if="loginMessage" class="message" :class="loginMessageType">{{ loginMessage }}</div>
       </form>
     </section>
+
     <section id="app-section" v-else>
       <header class="app-header">
         <div class="header-left">
@@ -62,18 +63,18 @@
 
       <section id="tasks-section">
         <div class="panel-header">
-          <h2>Tareas del día</h2> 
-            <button id="btn-print" onclick="window.print()">
-              Imprimir / PDF
+          <h2>Tareas del día</h2>
+          <button id="btn-print" onclick="window.print()">
+            Imprimir / PDF
+          </button>
+          <a class="panel-link" href="https://drive.google.com/drive/folders/1RRHA17OY5JTmvCRK5buK5kBzJmgpYxrz2_HFMOudcJAv3hoySdyy-iHu9voHTnLFT6aN0Fg3?usp=drive_link" target="_blank" rel="noopener">
+            <button>
+              <img src="img/gdrive_icon.png" alt="" class="panel-link-icon">
+              Archivos adjuntos
             </button>
-            <a class="panel-link" href="https://drive.google.com/drive/folders/1RRHA17OY5JTmvCRK5buK5kBzJmgpYxrz2_HFMOudcJAv3hoySdyy-iHu9voHTnLFT6aN0Fg3?usp=drive_link" target="_blank" rel="noopener">
-              <button>
-                <img src="img/gdrive_icon.png" alt="" class="panel-link-icon">
-                Archivos adjuntos
-              </button>
-              <img src="img/carpeta_adjuntos.png" alt="QR Carpeta Drive" class="panel-link-qr">
-            </a>
-          
+            <img src="img/carpeta_adjuntos.png" alt="QR Carpeta Drive" class="panel-link-qr">
+          </a>
+
           <div class="panel-controls">
             <label>
               Fecha
@@ -84,14 +85,14 @@
         </div>
 
         <div class="panel-table-wrapper">
-          <p v-if="loadingTasks">Cargando tareas…</p>
+          <p v-if="loadingTasks">Cargando tareas...</p>
           <p v-else-if="tasksMessage">{{ tasksMessage }}</p>
           <table v-else class="panel-table">
             <thead>
               <tr>
                 <th>Profesor</th>
                 <th>Franja horaria (grupo y aula)</th>
-                <th>📝 Tareas</th>
+                <th>Tareas</th>
               </tr>
             </thead>
             <tbody>
@@ -115,6 +116,7 @@
 
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="nav.js"></script>
   <script src="script.js"></script>
 </body>
 
