@@ -1,151 +1,596 @@
-body {
-  font-family: system-ui, sans-serif;
-  max-width: 90vw;
-  margin: 0 auto;
-  padding: 1rem;
-  background-color: #f6f7f9;
+:root {
+  --color-primary: #0066cc;
+  --color-primary-focus: #0071e3;
+  --color-primary-dark: #004f9f;
+  --color-primary-on-dark: #2997ff;
+  --color-canvas: #ffffff;
+  --color-canvas-parchment: #f5f5f7;
+  --color-surface-pearl: #fafafc;
+  --color-surface-tile-1: #272729;
+  --color-surface-tile-2: #2a2a2c;
+  --color-surface-black: #000000;
+  --color-ink: #1d1d1f;
+  --color-body: #1d1d1f;
+  --color-body-muted: #6e6e73;
+  --color-body-on-dark: #ffffff;
+  --color-muted-on-dark: #cccccc;
+  --color-hairline: #e0e0e0;
+  --color-divider-soft: rgba(0, 0, 0, 0.06);
+  --color-danger: #b42318;
+  --color-warning: #8a5a00;
+  --color-success: #0f7a39;
+  --space-xxs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 17px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-xxl: 48px;
+  --space-section: 80px;
+  --radius-sm: 8px;
+  --radius-md: 11px;
+  --radius-lg: 18px;
+  --radius-pill: 9999px;
+  --shadow-product: rgba(0, 0, 0, 0.22) 3px 5px 30px 0;
+  --font-display: "SF Pro Display", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-text: "SF Pro Text", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-h1 {
-  font-size: 1.3rem;
-}
-
-form {
-  margin-bottom: 1.5rem;
-}
-
-label {
-  display: block;
-  margin-top: 0.75rem;
-}
-.checkbox-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
-}
-.checkbox-row input {
-  width: auto;
-}
-.tooltip-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.95rem;
-  cursor: help;
-  user-select: none;
-}
-
-input,
-select,
-textarea {
-  width: 100%;
-  padding: 0.4rem;
-  font-size: 1rem;
+* {
   box-sizing: border-box;
 }
 
-button {
-  width: auto;
-  margin-top: 1rem;
-  cursor: pointer;
+html {
+  min-height: 100%;
+  background: var(--color-canvas-parchment);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--color-canvas-parchment);
+  color: var(--color-body);
+  font-family: var(--font-text);
+  font-size: 17px;
+  line-height: 1.47;
+  letter-spacing: 0;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto;
+  height: 44px;
+  background: var(--color-surface-black);
+  z-index: 0;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+#app {
+  position: relative;
+  z-index: 1;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 44px 24px 64px;
+}
+
+#app > h1 {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-lg);
+  flex-wrap: wrap;
+  margin: 0 -24px;
+  padding: 72px 24px 44px;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-size: 56px;
+  font-weight: 600;
+  line-height: 1.07;
+  letter-spacing: 0;
+  text-align: center;
+}
+
+.app-title-logo {
+  width: clamp(84px, 10vw, 132px);
+  height: auto;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+#app > h1 span {
+  min-width: 0;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--color-ink);
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+h2 {
+  margin: 0 0 17px;
+  font-size: 34px;
+  line-height: 1.18;
+}
+
+h3 {
+  margin: 0 0 12px;
+  font-size: 21px;
+  line-height: 1.19;
+}
+
+p,
+ul,
+ol {
+  margin-top: 0;
+}
+
+ul,
+ol {
+  padding-left: 1.35rem;
+}
+
+strong {
+  font-weight: 600;
 }
 
 .hidden {
+  display: none !important;
+}
+
+#login-section,
+#form-section,
+#list-section,
+#panel-section,
+#teachers-section,
+#tasks-section,
+#help-section,
+#substitutions-section,
+#justifications-section,
+#control-presencia-section,
+#permisos-section,
+.help-block,
+.panel,
+.controls,
+.table-container {
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+}
+
+#login-section {
+  max-width: 480px;
+  margin: 48px auto 0;
+}
+
+#app-section {
+  background: transparent;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  min-height: 52px;
+  margin: 0 -24px;
+  padding: 0 24px;
+  background: rgba(245, 245, 247, 0.82);
+  border-bottom: 1px solid var(--color-divider-soft);
+  backdrop-filter: saturate(180%) blur(20px);
+}
+
+.header-left {
+  min-width: 0;
+}
+
+.session-text {
+  display: block;
+  overflow: hidden;
+  color: var(--color-body-muted);
+  font-size: 14px;
+  line-height: 1.29;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-text strong {
+  color: var(--color-ink);
+}
+
+.top-nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0;
+  align-items: center;
+  margin: 0 -24px 0;
+  min-height: 44px;
+  padding: 0 24px;
+  overflow-x: auto;
+  background: var(--color-surface-black);
+  scrollbar-width: thin;
+}
+
+.top-nav-menu-button {
   display: none;
 }
 
-.message {
-  margin-top: 0.75rem;
-  padding: 0.5rem;
-  border-radius: 4px;
-  font-size: 0.9rem;
+.top-nav-menu-icon {
+  position: relative;
+  width: 18px;
+  height: 12px;
 }
 
-.message.ok {
-  background: #e0ffe0;
+.top-nav-menu-icon::before,
+.top-nav-menu-icon::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 18px;
+  height: 1px;
+  background: currentColor;
+  transition: transform 140ms ease, top 140ms ease;
 }
 
-.message.error {
-  background: #ffe0e0;
+.top-nav-menu-icon::before {
+  top: 2px;
 }
 
-/* Menú principal */
-.top-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  margin-bottom: 1rem;
+.top-nav-menu-icon::after {
+  top: 10px;
+}
+
+.top-nav-menu-button[aria-expanded="true"] .top-nav-menu-icon::before {
+  top: 6px;
+  transform: rotate(45deg);
+}
+
+.top-nav-menu-button[aria-expanded="true"] .top-nav-menu-icon::after {
+  top: 6px;
+  transform: rotate(-45deg);
 }
 
 .nav-link {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.45rem 0.85rem;
-  border-radius: 6px;
-  background: #e3e8ef;
-  color: #1f2a37;
-  border: 1px solid transparent;
-  margin-top: 0;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
   text-decoration: none;
-  font-weight: 600;
-  transition: background 0.15s ease, transform 0.1s ease;
-}
-
-.nav-link:active {
-  transform: scale(0.97);
-}
-
-.nav-link.active {
-  background: #1e88e5;
-  color: #fff;
-  border-color: #166fbe;
+  white-space: nowrap;
+  transition: color 140ms ease, background 140ms ease, transform 100ms ease;
 }
 
 .nav-link:hover {
-  background: #cfd7e3;
+  background: transparent;
+  color: var(--color-body-on-dark);
+  text-decoration: none;
 }
 
-.nav-link.active:hover {
-  background: #166fbe;
+.nav-link.active {
+  color: var(--color-body-on-dark);
+  background: rgba(255, 255, 255, 0.12);
 }
 
-/* Layout principal dentro de #app-section */
+.nav-link:active {
+  transform: scale(0.95);
+}
+
 .app-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-lg);
+  margin-top: var(--space-lg);
 }
 
-#form-section,
-#list-section,
-#panel-section {
-  background: #ffffff;
-  padding: 0.8rem;
-  border-radius: 8px;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.06);
+#teachers-section,
+#panel-section,
+#tasks-section,
+#help-section,
+#control-presencia-section,
+#permisos-section {
+  margin-top: var(--space-lg);
 }
 
-.panel-header {
+form {
+  margin: 0;
+}
+
+label,
+.field,
+.filter-group {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--space-xxs);
+  margin-top: var(--space-sm);
+  color: var(--color-body);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.29;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-pill);
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font: 400 17px/1.47 var(--font-text);
+  letter-spacing: 0;
+}
+
+textarea {
+  min-height: 86px;
+  border-radius: var(--radius-md);
+  resize: vertical;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  width: auto;
+  min-width: 18px;
+  min-height: 18px;
+  accent-color: var(--color-primary);
+}
+
+input[type="file"] {
+  border-radius: var(--radius-sm);
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--color-primary-focus);
+  outline-offset: 2px;
+}
+
+button,
+.button,
+.pill-button,
+.file-upload label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  min-height: 44px;
+  width: auto;
+  margin-top: var(--space-sm);
+  padding: 11px 22px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  color: var(--color-body-on-dark);
+  cursor: pointer;
+  font: 400 17px/1 var(--font-text);
+  letter-spacing: 0;
+  text-decoration: none;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease, transform 100ms ease;
+}
+
+button:hover,
+.button:hover,
+.pill-button:hover,
+.file-upload label:hover {
+  background: var(--color-primary-dark);
+  text-decoration: none;
+}
+
+button:active,
+.button:active,
+.pill-button:active,
+.file-upload label:active {
+  transform: scale(0.95);
+}
+
+button:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.btn-save,
+.btn-refresh,
+#runBtn,
+#exportBtn,
+.teacher-picker-confirm {
+  background: var(--color-primary);
+  color: var(--color-body-on-dark);
+}
+
+.btn-save:hover,
+.btn-refresh:hover,
+#runBtn:hover,
+#exportBtn:hover,
+.teacher-picker-confirm:hover {
+  background: var(--color-primary-dark);
+}
+
+.btn-secondary,
+.btn-logout,
+.teacher-picker-cancel {
+  background: var(--color-surface-pearl);
+  color: var(--color-ink);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+.btn-secondary:hover,
+.btn-logout:hover,
+.teacher-picker-cancel:hover {
+  background: var(--color-canvas);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.btn-delete,
+.pill.bad,
+.error {
+  background: #fff2f0;
+  color: var(--color-danger);
+  border-color: #ffd6d1;
+}
+
+.btn-delete:hover {
+  background: var(--color-danger);
+  color: var(--color-body-on-dark);
+  border-color: var(--color-danger);
+}
+
+.btn-logout {
+  min-height: 32px;
+  margin-top: 0;
+  padding: 8px 15px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+}
+
+.checkbox-row,
+.schedule-edit-toggle,
+.teacher-status-control,
+.simulated-absence-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+}
+
+.message,
+.status-message,
+.schedule-edit-message,
+.absence-edit-message,
+.small,
+.muted,
+.absence-meta,
+.footer-note,
+.file-name,
+.subtitle {
+  color: var(--color-body-muted);
+  font-size: 14px;
+  line-height: 1.43;
+}
+
+.message {
+  margin-top: var(--space-sm);
+  padding: 10px 14px;
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-pearl);
+}
+
+.message.ok,
+.status-message.ok,
+.status-message.success,
+.schedule-edit-message.ok,
+.absence-edit-message.ok,
+.pill.ok {
+  background: #eef9f2;
+  color: var(--color-success);
+  border-color: #cdebd7;
+}
+
+.message.error,
+.status-message.error,
+.schedule-edit-message.error,
+.absence-edit-message.error {
+  background: #fff2f0;
+  color: var(--color-danger);
+  border-color: #ffd6d1;
+}
+
+.message.info,
+.status-message.info,
+.schedule-edit-message.info,
+.absence-edit-message.info {
+  background: #f0f7ff;
+  color: var(--color-primary);
+  border-color: #cfe5ff;
+}
+
+.panel-header,
+.teacher-schedule-header,
+.guest-panel-header,
+.justifications-header,
+.substitutions-block-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-lg);
+}
+
+.panel-header h2,
+.guest-panel-header h2,
+.justifications-header h2 {
+  margin: 0;
+}
+
+.panel-controls,
+.list-date-controls,
+.teacher-schedule-controls,
+.justifications-actions,
+.actions,
+.filters,
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-sm);
+}
+
+.panel-controls label,
+.list-date-controls label,
+.teacher-schedule-controls label,
+.field {
+  min-width: 190px;
+  margin-top: 0;
+}
+
+.list-date-nav {
+  min-width: 44px;
+  padding: 0;
 }
 
 .panel-link button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
   margin-top: 0;
 }
 
 .panel-link-icon {
+  display: inline-block;
   width: 16px;
   height: 16px;
-  display: inline-block;
-  vertical-align: middle;
 }
 
 .panel-link-qr {
@@ -154,585 +599,369 @@ button {
   height: auto;
 }
 
-@media (min-width: 640px) {
-  .panel-header {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: flex-end;
-  }
-}
-
-.panel-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.list-date-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.list-date-controls label {
-  margin-top: 0;
-}
-
-.list-date-nav {
-  margin-top: 0;
-}
-
-@media (min-width: 640px) {
-  .panel-controls {
-    flex-direction: row;
-    align-items: flex-end;
-    gap: 1rem;
-  }
-
-  .panel-controls label {
-    min-width: 220px;
-  }
-
-  .list-date-controls {
-    flex-direction: row;
-    align-items: flex-end;
-  }
-
-  .list-date-controls label {
-    flex: 1;
-  }
-}
-
-.panel-table-wrapper {
-  margin-top: 1rem;
-  overflow-x: auto;
-}
-
-.panel-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.95rem;
-}
-
-.panel-table th,
-.panel-table td {
-  border: 1px solid #e0e0e0;
-  padding: 0.4rem 0.6rem;
-  text-align: left;
-}
-
-.panel-table th {
-  background: #f3f6fa;
-  font-weight: 600;
-}
-
-/* Colores sutiles para tipos de guardia */
-.guard-biblioteca {
-  display: inline-block;
-  padding: 0.15rem 0.4rem;
-  border-radius: 4px;
-  background: #fff3e0;
-  color: #8d5e00;
-}
-
-.guard-alegria {
-  display: inline-block;
-  padding: 0.15rem 0.4rem;
-  border-radius: 4px;
-  background: #e0f2f1;
-  color: #00695c;
-}
-
-.guard-buleria {
-  display: inline-block;
-  padding: 0.15rem 0.4rem;
-  border-radius: 4px;
-  background: #ede7f6;
-  color: #4527a0;
-}
-
-.guard-default {
-  display: inline-block;
-  padding: 0.15rem 0.4rem;
-  border-radius: 4px;
-  background: #f5f5f5;
-  color: #424242;
-}
-
-.guard-absent {
-  text-decoration: line-through;
-  opacity: 0.55;
-}
-
-.guest-classroom {
-  display: inline-block;
-  padding: 0;
-  border-radius: 0;
-  background: transparent;
-  color: inherit;
+.absence-list,
+.guest-candidate-list,
+.stats,
+.guest-participation-list {
+  display: grid;
+  gap: var(--space-sm);
 }
 
 .absence-list {
-  margin-top: 0.75rem;
-  display: grid;
-  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: var(--space-md);
 }
 
-/* Tarjetas de ausencias */
+.absence-item,
+.stat-card,
+.guest-participation-list li,
+.inactive-teachers-box,
+.group-absence-simulator,
+.guest-participation-viewer,
+.guest-classroom-manager,
+.schedule-edit-entry,
+.guest-classroom-summary span,
+.teacher-picker-modal,
+.modal-content,
+.empty-state {
+  background: var(--color-canvas);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-lg);
+}
+
 .absence-item {
-  box-sizing: border-box;
-  width: 100%;
-  min-width: 0;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  padding: 0.5rem 0.75rem;
-  margin: 0;
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
   align-items: flex-start;
-  gap: 0.5rem;
-  font-size: 0.9rem;
-  background: #fafafa;
-}
-
-.absence-item.duplicate-teacher {
-  background: #fff3cd;
-  border-color: #ffc107;
-  border-width: 2px;
-  box-shadow: 0 0 8px rgba(255, 193, 7, 0.3);
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-md);
 }
 
 .absence-main {
-  flex: 1;
+  flex: 1 1 220px;
+  min-width: 0;
+  cursor: pointer;
 }
 
 .absence-main strong {
   display: block;
+  font-size: 17px;
+  line-height: 1.24;
 }
 
-.absence-meta {
-  font-size: 0.8rem;
-  color: #555;
+.absence-actions {
+  display: flex;
+  gap: var(--space-xs);
 }
 
 .absence-actions button {
-  font-size: 0.85rem;
+  margin-top: 0;
+}
+
+.absence-item.duplicate-teacher {
+  border-color: #ffd76a;
+  background: #fff8e6;
 }
 
 .absence-edit {
-  margin-top: 0.5rem;
-  padding: 0.5rem;
-  border-top: 1px solid #e0e0e0;
-  background: #fff;
-  border-radius: 4px;
+  flex: 1 0 100%;
+  margin-top: var(--space-xs);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--color-hairline);
 }
 
 .absence-edit-title {
-  font-size: 0.85rem;
+  margin: 0 0 var(--space-xs);
+  font-size: 14px;
   font-weight: 600;
-  margin: 0 0 0.4rem 0;
 }
 
-.absence-edit-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.absence-edit-controls select {
-  width: 100%;
-}
-
-.absence-edit-buttons {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-}
-
-.absence-edit-buttons button {
-  flex: 1;
-}
-
-.absence-edit-message {
-  margin-top: 0.4rem;
-  font-size: 0.8rem;
-}
-
-.absence-edit-message.ok {
-  color: #2e8b57;
-}
-
-.absence-edit-message.error {
-  color: #c62828;
-}
-
-.absence-edit-message.info {
-  color: #1565c0;
-}
-
-@media (min-width: 940px) {
-  .absence-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .absence-item {
-    min-height: 100%;
-  }
-}
-
-/* Responsive: dos columnas en pantallas anchas */
-@media (min-width: 768px) {
-  .app-grid {
-    flex-direction: row;
-    align-items: flex-start;
-  }
-
-  #form-section,
-  #list-section {
-    flex: 1;
-  }
-}
-
-/* ================================
-   BOTONES GENERALES
-   ================================ */
-button {
-  font-family: inherit;
-  font-size: 0.95rem;
-  font-weight: 600;
-  padding: 0.45rem 0.8rem;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.1s ease;
-}
-
-button:active {
-  transform: scale(0.97);
-}
-
-/* ================================
-   BOTÓN VERDE → GUARDAR AUSENCIA
-   ================================ */
-.btn-save {
-  background: #2e8b57;
-  /* verde profesional */
-  color: white;
-}
-
-.btn-save:hover {
-  background: #27764a;
-}
-
-/* ================================
-   BOTÓN NEUTRO → CANCELAR
-   ================================ */
-.btn-secondary {
-  background: #d7dce6;
-  color: #1f2a3d;
-  border: 1px solid #c3cad7;
-}
-
-.btn-secondary:hover {
-  background: #c8ceda;
-}
-
-/* ================================
-   BOTÓN AZUL → ACTUALIZAR LISTA
-   ================================ */
-.btn-refresh {
-  background: #1e88e5;
-  /* azul claro bonito */
-  color: white;
-}
-
-.btn-refresh:hover {
-  background: #166fbe;
-}
-
-/* ================================
-   BOTÓN ROJO → ELIMINAR AUSENCIA
-   ================================ */
-.btn-delete {
-  background: #d32f2f;
-  color: white;
-}
-
-.btn-delete:hover {
-  background: #b71c1c;
-}
-
-/* ================================
-   ENCABEZADO SUPERIOR
-   ================================ */
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: start;
-  gap: 10px;
-  background: #ffffff;
-  padding: 0.6rem 1rem;
-  border-radius: 8px;
-  margin-bottom: 1rem;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.06);
-}
-
-/* Parte izquierda: logo + texto */
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.ies-logo {
-  height: 40px;
-  width: auto;
-  object-fit: contain;
-}
-
-.session-text {
-  font-size: 0.95rem;
-  color: #333;
-}
-
-/* Botón cerrar sesión */
-.btn-logout {
-  background: #888;
-  /* gris neutro */
-  color: white;
-  font-size: 0.9rem;
-  font-weight: 600;
-  padding: 0.45rem 0.8rem;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.1s ease;
-  max-width: 150px;
-}
-
-.btn-logout:hover {
-  background: #666;
-}
-
-.btn-logout:active {
-  transform: scale(0.97);
-}
-
-.help-block {
-  background: #ffffff;
-  padding: 0.8rem 1rem;
-  border-radius: 8px;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.06);
-  margin-bottom: 1rem;
-}
-
-.help-block h3 {
-  margin-top: 0;
-}
-
-.help-block ul {
-  padding-left: 1.2rem;
-}
-
-/* ================================
-   Responsive
-   ================================ */
-
-@media (max-width: 600px) {
-  .app-header {
-    flex-direction: column;
-    gap: 0.6rem;
-    text-align: center;
-  }
-}
-
-/* =====================================
-   SECCIÓN DE SUSTITUCIONES
-   ===================================== */
-#substitutions-section {
-  margin-top: 1.5rem;
-  background: #ffffff;
-  padding: 0.8rem 1rem;
-  border-radius: 8px;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.06);
-}
-
-#justifications-section {
-  margin-top: 1.5rem;
-  background: #ffffff;
-  padding: 0.8rem 1rem;
-  border-radius: 8px;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.06);
-}
-
-#justifications-section h2 {
-  margin: 0;
-}
-
-.justifications-header {
+.absence-edit-controls,
+.absence-edit-buttons,
+.schedule-edit-actions {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-sm);
 }
 
-.justifications-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+.absence-edit-buttons button,
+.schedule-edit-actions button {
+  margin-top: 0;
 }
 
-.tooltip-wrapper {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-
-.tooltip-text {
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 0.6rem);
-  transform: translateX(-50%);
-  width: min(22rem, calc(100vw - 2rem));
-  padding: 0.65rem 0.8rem;
-  border-radius: 6px;
-  background: #1f2a3d;
-  color: #fff;
-  font-size: 0.8rem;
-  line-height: 1.35;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition: opacity 0.15s ease;
-  z-index: 20;
-}
-
-.tooltip-text::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 100%;
-  transform: translateX(-50%);
-  border-width: 6px;
-  border-style: solid;
-  border-color: #1f2a3d transparent transparent transparent;
-}
-
-.tooltip-wrapper:hover .tooltip-text,
-.tooltip-wrapper:focus-within .tooltip-text {
-  opacity: 1;
-  visibility: visible;
-}
-
-.justifications-content {
-  margin-top: 1rem;
-}
-
-.justifications-table {
+.panel-table-wrapper,
+.teacher-schedule-grid,
+.table-wrapper,
+#tableWrap {
   width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
+  margin-top: var(--space-md);
+  overflow-x: auto;
 }
 
+table,
+.panel-table,
+.schedule-table,
+.justifications-table,
+.substitutions-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  color: var(--color-body);
+  font-size: 14px;
+}
+
+th,
+td,
+.panel-table th,
+.panel-table td,
+.schedule-table th,
+.schedule-table td,
 .justifications-table th,
-.justifications-table td {
-  border: 1px solid #ddd;
-  padding: 0.4rem 0.5rem;
+.justifications-table td,
+.substitutions-table th,
+.substitutions-table td {
+  padding: 10px 12px;
+  border: 0;
+  border-bottom: 1px solid var(--color-hairline);
   text-align: left;
+  vertical-align: top;
 }
 
-.justifications-table th {
-  background: #f5f5f5;
-}
-
-.overdue-unjustified-date {
-  color: #c62828;
+thead th,
+table th,
+.panel-table th,
+.schedule-table thead th,
+.justifications-table th,
+.substitutions-table th {
+  background: var(--color-canvas-parchment);
+  color: var(--color-ink);
   font-weight: 600;
 }
 
-.month-picker .month-picker-controls {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.month-picker .month-picker-controls select {
-  min-width: 9rem;
-}
-
-.month-picker .month-picker-controls select:last-child {
-  min-width: 6rem;
-}
-
-.status-select {
-  min-width: 10rem;
-}
-
-.status-message {
-  display: block;
-  font-size: 0.75rem;
-  margin-top: 0.2rem;
-}
-
-.status-message.ok {
-  color: #2e8b57;
-}
-
-.status-message.error {
-  color: #c62828;
-}
-
-.status-message.info {
-  color: #1e88e5;
-}
-
-#substitutions-section h2 {
-  margin-top: 0;
-  margin-bottom: 0.8rem;
-}
-
-.substitutions-layout {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.substitutions-block {
-  flex: 1;
-}
-
-.substitutions-block h3 {
-  margin-top: 0;
-  margin-bottom: 0.5rem;
-}
-
-.substitutions-block-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 0.5rem;
-}
-
-.substitutions-block-header h3 {
-  margin: 0;
-}
-
-.inactive-teachers-box {
-  min-width: 220px;
-  max-width: 320px;
-  padding: 0.45rem 0.6rem;
-  border: 1px solid #dce5f2;
-  border-radius: 8px;
+tbody tr:hover td,
+tbody tr:hover th {
   background: #f9fbff;
 }
 
+.panel-table tbody tr.panel-slot-even td,
+.panel-table tbody tr.panel-slot-even th,
+tbody tr:nth-child(even) td {
+  background-color: var(--color-surface-pearl);
+}
+
+.schedule-table tbody th {
+  min-width: 128px;
+  background: var(--color-canvas-parchment);
+  color: var(--color-ink);
+}
+
+.schedule-cell {
+  display: grid;
+  gap: var(--space-xs);
+  min-width: 180px;
+}
+
+.schedule-cell--empty {
+  display: block;
+  min-width: auto;
+  color: #b0b0b5;
+  text-align: center;
+}
+
+.schedule-class {
+  display: block;
+  padding: 10px 12px;
+  border: 1px solid #cfe5ff;
+  border-radius: var(--radius-md);
+  background: #f0f7ff;
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.guest-candidate-card:hover,
+.guest-classroom-card:hover {
+  border-color: var(--color-primary);
+}
+
+.guest-panel-card {
+  cursor: default;
+}
+
+.schedule-class--hidden {
+  border-color: #ffd6d1;
+  background: #fff2f0;
+}
+
+.schedule-class-main,
+.schedule-class-meta,
+.guest-print-line {
+  margin: 0;
+}
+
+.schedule-class-main {
+  font-weight: 600;
+  line-height: 1.24;
+}
+
+.schedule-class-meta {
+  color: var(--color-body-muted);
+  font-size: 14px;
+}
+
+.schedule-badge,
+.guard-biblioteca,
+.guard-alegria,
+.guard-buleria,
+.guard-default,
+.pill,
+.status-message {
+  display: inline-flex;
+  align-items: center;
+  width: max-content;
+  max-width: 100%;
+  margin-top: var(--space-xxs);
+  padding: 4px 9px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.schedule-badge {
+  background: #fff2f0;
+  color: var(--color-danger);
+  border-color: #ffd6d1;
+}
+
+.guard-biblioteca,
+.pill.warn {
+  background: #fff8e6;
+  color: var(--color-warning);
+  border-color: #f3dfaa;
+}
+
+.guard-alegria {
+  background: #eef9f2;
+  color: var(--color-success);
+  border-color: #cdebd7;
+}
+
+.guard-buleria {
+  background: #f0f7ff;
+  color: var(--color-primary);
+  border-color: #cfe5ff;
+}
+
+.guard-default,
+.pill {
+  background: var(--color-surface-pearl);
+  color: var(--color-body-muted);
+  border-color: var(--color-hairline);
+}
+
+.guard-absent,
+.guest-panel-teacher--absent {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+.guest-classroom {
+  color: inherit;
+}
+
+.guest-subsection-tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-xxs);
+  margin-bottom: var(--space-lg);
+  padding: var(--space-xxs);
+  border: 1px solid var(--color-hairline);
+  border-radius: var(--radius-pill);
+  background: var(--color-canvas-parchment);
+}
+
+.guest-subsection-tabs button {
+  min-height: 36px;
+  margin-top: 0;
+  padding: 8px 15px;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-body-muted);
+  font-size: 14px;
+}
+
+.guest-subsection-tabs button.active {
+  background: var(--color-primary);
+  color: var(--color-body-on-dark);
+}
+
+.group-absence-simulator,
+.guest-participation-viewer,
+.guest-classroom-manager {
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+}
+
+details summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.simulated-absence-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-xs) var(--space-md);
+  margin: var(--space-sm) 0;
+}
+
+.guest-classroom-form,
+.schedule-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-sm);
+  align-items: end;
+  margin-top: var(--space-sm);
+}
+
+.guest-candidate-list,
+.guest-participation-list {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  margin-top: var(--space-sm);
+  padding: 0;
+  list-style: none;
+}
+
+.guest-candidate-card {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.guest-classroom-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.guest-classroom-summary span,
+.guest-participation-list li,
+.inactive-teachers-box,
+.schedule-edit-entry {
+  padding: 10px 12px;
+}
+
+.guest-participation-count {
+  color: var(--color-body-muted);
+  font-size: 14px;
+}
+
 .inactive-teachers-title {
-  margin: 0 0 0.35rem;
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: #344055;
+  margin: 0 0 var(--space-xs);
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .inactive-teachers-list {
@@ -742,425 +971,20 @@ button:active {
   overflow: auto;
 }
 
-.inactive-teachers-list li {
-  font-size: 0.85rem;
-  line-height: 1.35;
-}
-
-.inactive-teachers-empty {
+.inactive-teachers-empty,
+.schedule-edit-help,
+.schedule-edit-warning {
   margin: 0;
-  font-size: 0.82rem;
-  color: #5f6a7d;
+  color: var(--color-body-muted);
+  font-size: 14px;
 }
 
-.substitutions-block>span {
-  /*pequeña nota aclaratoria*/
-  font-size: 0.75rem;
-  color: #555;
+.schedule-edit-entry {
+  background: var(--color-surface-pearl);
 }
 
-/* Tabla de sustituciones activas */
-.substitutions-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-.substitutions-table th,
-.substitutions-table td {
-  border: 1px solid #ddd;
-  padding: 0.4rem 0.5rem;
-}
-
-.substitutions-table th {
-  background: #f5f5f5;
-  text-align: left;
-}
-
-/* Diseño: celdas "striped" para mejor lectura (filas y efecto vertical sutil) */
-table {
-  border-collapse: collapse;
-  width: 100%;
-  font-size: 0.95rem;
-}
-
-/* Cabecera */
-table th {
-  background: #f3f6fb;
-  color: #0b2545;
-  text-align: left;
-  padding: 0.6rem 0.8rem;
-  border-bottom: 1px solid #e6eef8;
-}
-
-/* Celdas */
-table td {
-  padding: 0.55rem 0.8rem;
-  border-bottom: 1px solid #eef4fb;
-  vertical-align: middle;
-}
-
-/* Rayado por filas (zebra) */
-.justifications-table tbody tr:nth-child(odd) td,
-.substitutions-table tbody tr:nth-child(odd) td,
-table tbody tr:nth-child(odd) td {
-  background-color: #ffffff;
-}
-
-.justifications-table tbody tr:nth-child(even) td,
-.substitutions-table tbody tr:nth-child(even) td,
-table tbody tr:nth-child(even) td {
-  background-color: #ebebeb;
-  /* sutil contraste */
-}
-
-.panel-table tbody tr.panel-slot-even td {
-  background-color: #ececec;
-}
-
-.panel-table tbody tr.panel-slot-odd td {
-  background-color: #ffffff;
-}
-
-/* Rayado vertical sutil por columnas (opcional: mejora lectura en tablas anchas) */
-.justifications-table tbody td:nth-child(odd),
-.substitutions-table tbody td:nth-child(odd),
-table tbody td:nth-child(odd) {
-  /* color muy sutil para no competir con el rayado por filas */
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0));
-}
-
-/* Hover para destacar fila */
-table tbody tr:hover td {
-  background-color: #e9f3ff;
-  transition: background-color 120ms ease;
-}
-
-/* =====================================
-   SECCIÓN PROFESORADO
-   ===================================== */
-#teachers-section {
-  margin-top: 1.5rem;
-  background: #ffffff;
-  padding: 1rem;
-  border-radius: 8px;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.06);
-}
-
-.guest-subsection-tabs {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-bottom: 1rem;
-  padding: 0.25rem;
-  border: 1px solid #dce5f2;
-  border-radius: 8px;
-  background: #f3f6fb;
-}
-
-.guest-subsection-tabs button {
-  min-height: 2.25rem;
-  padding: 0.45rem 0.8rem;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: transparent;
-  color: #2b4a67;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.guest-subsection-tabs button.active {
-  border-color: #c8e1ff;
-  background: #ffffff;
-  color: #0f5ca8;
-  box-shadow: 0 1px 3px rgba(15, 92, 168, 0.12);
-}
-
-.guest-subsection {
-  min-width: 0;
-}
-
-.guest-participation-viewer {
-  margin-top: 1rem;
-  padding: 0.75rem;
-  border: 1px solid #dce5f2;
-  border-radius: 8px;
-  background: #f9fbff;
-}
-
-.guest-participation-header {
-  display: block;
-}
-
-.guest-participation-header h3 {
-  margin: 0;
-  font-size: 1rem;
-  color: #24384f;
-}
-
-.guest-participation-list {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.45rem;
-  margin-top: 0.75rem;
-  padding: 0;
-  list-style: none;
-}
-
-.guest-participation-list li {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.45rem 0.6rem;
-  border-radius: 6px;
-  background: #fff8e6;
-  border: 1px solid #f2dfaa;
-  color: #4f3b0a;
-  font-weight: 600;
-}
-
-.guest-participation-count {
-  color: #7a5a13;
-  font-size: 0.9rem;
-  white-space: nowrap;
-}
-
-.guest-panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.guest-panel-header h2 {
-  margin: 0;
-}
-
-.teacher-schedule-header {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-@media (min-width: 768px) {
-  .teacher-schedule-header {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: flex-end;
-  }
-}
-
-.teacher-schedule-controls {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-@media (min-width: 540px) {
-  .teacher-schedule-controls {
-    flex-direction: row;
-    align-items: flex-end;
-  }
-
-  .teacher-schedule-controls .teacher-selector-control {
-    min-width: 220px;
-  }
-}
-
-.teacher-schedule-grid {
-  margin-top: 1rem;
-  overflow-x: auto;
-}
-
-.group-absence-simulator {
-  margin-top: 1rem;
-  padding: 0.75rem;
-  border: 1px solid #dce5f2;
-  border-radius: 8px;
-  background: #f9fbff;
-}
-
-.group-absence-simulator summary {
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.simulated-absence-list {
-  margin: 0.6rem 0 0.4rem;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.35rem 0.9rem;
-}
-
-.simulated-absence-item {
+.schedule-edit-label {
   margin-top: 0;
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.15rem 0;
-}
-
-.simulated-absence-item input {
-  width: auto;
-}
-
-.schedule-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-.schedule-table th,
-.schedule-table td {
-  border: 1px solid #e0e6ef;
-  padding: 0.5rem;
-  text-align: left;
-  vertical-align: top;
-}
-
-.schedule-table thead th {
-  background: #f3f6fb;
-}
-
-.schedule-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-}
-
-.schedule-cell--empty {
-  color: #b0b8c5;
-  text-align: center;
-}
-
-.schedule-class {
-  border-radius: 6px;
-  padding: 0.35rem 0.45rem;
-  background: #e9f3ff;
-  border: 1px solid #c8e1ff;
-  cursor: pointer;
-}
-
-.schedule-class--hidden {
-  background: #fce8e6;
-  border-color: #f4b4ac;
-}
-
-.schedule-class-main {
-  font-weight: 600;
-  margin: 0 0 0.1rem 0;
-}
-
-.schedule-class-meta {
-  margin: 0;
-  font-size: 0.85rem;
-  color: #3d4a5c;
-}
-
-.guest-classroom-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  margin-top: 1rem;
-}
-
-.guest-classroom-summary span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.25rem 0.55rem;
-  border-radius: 6px;
-  background: #eef7f1;
-  border: 1px solid #cde8d6;
-  color: #1f5b33;
-  font-size: 0.88rem;
-}
-
-.guest-classroom-manager {
-  margin-top: 1rem;
-  padding: 0.75rem;
-  border: 1px solid #dce5f2;
-  border-radius: 8px;
-  background: #f9fbff;
-}
-
-.guest-classroom-manager summary {
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.guest-classroom-form {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.75rem;
-  align-items: end;
-  margin: 0.75rem 0 0;
-}
-
-.guest-classroom-form label {
-  margin-top: 0;
-}
-
-.guest-candidate-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 0.6rem;
-  margin-top: 0.75rem;
-}
-
-.guest-candidate-card {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.75rem;
-  align-items: flex-start;
-  cursor: pointer;
-}
-
-.guest-classroom-table th:first-child {
-  min-width: 140px;
-}
-
-.guest-classroom-table td {
-  min-width: 180px;
-}
-
-.guest-classroom-card {
-  cursor: pointer;
-}
-
-.guest-panel-card {
-  cursor: default;
-}
-
-.guest-panel-teacher--absent {
-  text-decoration: line-through;
-  opacity: 0.6;
-}
-
-.guest-print-panel-table {
-  font-size: 0.82rem;
-}
-
-.guest-print-panel-table th:first-child {
-  min-width: 96px;
-}
-
-.guest-print-panel-table td {
-  min-width: 140px;
-  vertical-align: top;
-}
-
-.guest-print-lines {
-  display: flex;
-  flex-direction: column;
-  gap: 0.12rem;
-}
-
-.guest-print-line {
-  margin: 0;
-  line-height: 1.2;
-  color: #1f2a37;
 }
 
 .guest-classroom-card--saving {
@@ -1168,208 +992,318 @@ table tbody tr:hover td {
   pointer-events: none;
 }
 
-.schedule-badge {
-  display: inline-block;
-  margin-top: 0.2rem;
-  padding: 0.1rem 0.45rem;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: #8a1c14;
-  background: #ffe1dd;
-}
-
-.schedule-class-edit {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.schedule-edit-help {
-  margin: 0;
-  font-size: 0.85rem;
-  color: #2f3b4e;
-}
-
-.schedule-edit-entry {
-  border: 1px dashed #c8e1ff;
-  border-radius: 6px;
-  padding: 0.6rem;
-  background: #f6f9ff;
-}
-
-.schedule-edit-grid {
+.guest-print-lines {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.6rem;
+  gap: 2px;
 }
 
-.schedule-edit-label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+.help-block + .help-block,
+.panel + .panel {
+  margin-top: var(--space-lg);
+}
+
+.tooltip-icon,
+.info-icon,
+.help-btn,
+.button-icon-circular {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(210, 210, 215, 0.64);
+  color: var(--color-ink);
+  cursor: help;
+}
+
+.tooltip-wrapper,
+.tooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tooltip-text,
+.tooltip .tooltip,
+.info-icon .tooltip,
+.tooltip:hover::after {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  z-index: 50;
+  width: min(22rem, calc(100vw - 2rem));
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-tile-1);
+  color: var(--color-body-on-dark);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.43;
+  transform: translateX(-50%);
+}
+
+.tooltip-text {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 140ms ease;
+}
+
+.tooltip-wrapper:hover .tooltip-text,
+.tooltip-wrapper:focus-within .tooltip-text {
+  opacity: 1;
+  visibility: visible;
+}
+
+.tooltip:hover::after {
+  content: attr(data-tooltip);
+  white-space: nowrap;
+}
+
+.container {
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.filters,
+.stats {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.stat-card {
+  padding: var(--space-lg);
+}
+
+.stat-label {
+  color: var(--color-body-muted);
+  font-size: 14px;
   font-weight: 600;
-  color: #344055;
-  font-size: 0.9rem;
 }
 
-.schedule-edit-label input,
-.schedule-edit-label textarea {
-  width: 100%;
-  padding: 0.35rem 0.5rem;
-  border-radius: 4px;
-  border: 1px solid #cdd8ea;
-  font-size: 0.95rem;
-  background: #fff;
-}
-
-.schedule-edit-label textarea {
-  min-height: 54px;
-}
-
-.schedule-edit-toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
+.stat-value {
+  color: var(--color-primary);
+  font-family: var(--font-display);
+  font-size: 40px;
   font-weight: 600;
-  color: #344055;
+  line-height: 1.1;
 }
 
-.teacher-status-control {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  column-gap: 0.35rem;
-}
-
-.teacher-status-control input[type="checkbox"] {
-  margin: 0;
-}
-
-.schedule-edit-actions {
+.file-upload {
   display: flex;
-  gap: 0.75rem;
+  flex-wrap: wrap;
   align-items: center;
+  gap: var(--space-sm);
 }
 
-.schedule-edit-message {
-  font-size: 0.9rem;
+.file-upload input[type="file"] {
+  display: none;
 }
 
-.schedule-edit-message.ok {
-  color: #0f7a39;
+.table-container {
+  overflow: hidden;
 }
 
-.schedule-edit-message.info {
-  color: #255f99;
+.empty-state {
+  padding: var(--space-xxl);
+  text-align: center;
 }
 
-.schedule-edit-message.error {
-  color: #b32323;
+.empty-state-icon {
+  color: var(--color-primary);
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 600;
 }
 
-.schedule-edit-warning {
-  margin: 0.35rem 0 0;
-  font-size: 0.85rem;
-  color: #a36100;
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: none;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Ajustes para selects y mensajes en la columna de estado */
-.status-select {
-  padding: 0.25rem 0.4rem;
-  border-radius: 4px;
-  border: 1px solid #cfe3ff;
-  background: #fff;
-  font-size: 0.95rem;
+.modal.open {
+  display: flex;
 }
 
-.status-message {
-  display: inline-block;
-  margin-left: 0.6rem;
-  padding: 0.18rem 0.45rem;
-  border-radius: 3px;
-  font-size: 0.85rem;
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.42);
 }
 
-/* Contrastes para mensajes de estado (ejemplo: aprobado / rechazado) */
-.status-message.success {
-  background: #e6fbf0;
-  color: #0a6b3b;
-  border: 1px solid #d1f3db;
+.modal-content {
+  position: relative;
+  z-index: 101;
+  width: min(720px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  overflow: auto;
+  padding: var(--space-lg);
 }
 
-.status-message.error {
-  background: #fff3f2;
-  color: #c62828;
-  border: 1px solid #f5dcdc;
+.modal-content img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-sm);
 }
 
-.status-message.info {
-  background: #e3f2fd;
-  color: #1565c0;
-  border: 1px solid #bbdefb;
+.modal-close {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  margin-top: 0;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(210, 210, 215, 0.64);
+  color: var(--color-ink);
 }
 
-/* Responsive: ajustes adicionales para pantallas pequeñas */
-@media (max-width: 768px) {
-  .app-grid {
-    flex-direction: column;
+.modal-img {
+  margin: var(--space-md) auto;
+  text-align: center;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+}
+
+.w-file,
+.w-date,
+.w-num,
+.w-letter {
+  max-width: 100%;
+}
+
+.w-file {
+  width: min(360px, 100%);
+}
+
+.w-date {
+  width: 180px;
+}
+
+.w-num,
+.w-letter {
+  width: 110px;
+}
+
+.w-letter {
+  text-transform: uppercase;
+}
+
+.cell-match {
+  background: #f0f7ff !important;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.teacher-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-lg);
+  background: rgba(0, 0, 0, 0.42);
+}
+
+.teacher-picker-modal {
+  width: min(560px, 100%);
+  max-height: 85vh;
+  overflow: auto;
+  padding: var(--space-lg);
+}
+
+.teacher-picker-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.teacher-picker-select {
+  min-height: 220px;
+  border-radius: var(--radius-md);
+}
+
+.overdue-unjustified-date {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+@media (max-width: 1068px) {
+  #app > h1 {
+    font-size: 40px;
   }
 
-  .absence-item {
-    flex-direction: column;
+  .app-grid,
+  .absence-list {
+    grid-template-columns: 1fr;
   }
+}
 
-  .absence-meta {
-    order: -1;
-    margin-bottom: 0.5rem;
-  }
-
-  .absence-actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
-
-  .absence-edit {
-    padding: 0.8rem;
-  }
-
-  .absence-edit-controls {
-    flex-direction: row;
+@media (max-width: 1280px) {
+  .top-nav {
     flex-wrap: wrap;
-    gap: 0.6rem;
+    row-gap: 0;
+    min-height: 44px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    overflow-x: visible;
   }
 
-  .absence-edit-buttons {
-    width: 100%;
-    flex-direction: row;
-    gap: 0.4rem;
+  .top-nav .nav-link {
+    min-height: 36px;
+    padding-right: 9px;
+    padding-left: 9px;
+  }
+}
+
+@media (max-width: 833px) {
+  #app {
+    padding-right: 16px;
+    padding-left: 16px;
   }
 
-  .absence-edit-message {
-    text-align: center;
+  #app > h1,
+  .app-header,
+  .top-nav {
+    margin-right: -16px;
+    margin-left: -16px;
+    padding-right: 16px;
+    padding-left: 16px;
   }
 
-  .justifications-table,
-  .substitutions-table {
-    font-size: 0.85rem;
-  }
-
-  .status-select {
-    width: 100%;
-  }
-
+  .app-header,
+  .panel-header,
+  .teacher-schedule-header,
+  .guest-panel-header,
+  .justifications-header,
   .substitutions-block-header {
+    align-items: flex-start;
     flex-direction: column;
   }
 
-  .inactive-teachers-box {
-    width: 100%;
-    max-width: none;
+  .top-nav {
+    justify-content: flex-start;
   }
 
-  .guest-participation-list {
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  .top-nav .nav-link {
+    min-height: 40px;
+    font-size: 13px;
+  }
+
+  .top-nav .nav-link.active {
+    color: var(--color-body-on-dark);
   }
 
   .simulated-absence-list {
@@ -1377,13 +1311,178 @@ table tbody tr:hover td {
   }
 }
 
+@media (max-width: 640px) {
+  #app {
+    padding-bottom: 40px;
+  }
+
+  #app > h1 {
+    padding-top: 48px;
+    padding-bottom: 32px;
+    gap: var(--space-md);
+    font-size: 34px;
+  }
+
+  .app-title-logo {
+    width: 82px;
+  }
+
+  .top-nav-menu-button {
+    position: sticky;
+    top: 0;
+    z-index: 21;
+    display: flex;
+    justify-content: space-between;
+    width: calc(100% + 32px);
+    min-height: 52px;
+    margin: 0 -16px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 0;
+    background: var(--color-surface-black);
+    color: var(--color-body-on-dark);
+    font-size: 14px;
+  }
+
+  .top-nav-menu-button:hover {
+    background: var(--color-surface-black);
+  }
+
+  .top-nav-menu-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .top-nav {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    margin-top: 0;
+    padding-top: 8px;
+    padding-bottom: 12px;
+    overflow-x: visible;
+  }
+
+  .top-nav[data-enhanced="true"] {
+    display: none;
+  }
+
+  .top-nav[data-enhanced="true"].is-open {
+    display: grid;
+  }
+
+  .top-nav-menu-button[aria-expanded="true"] + .top-nav {
+    display: grid;
+  }
+
+  .top-nav .nav-link {
+    justify-content: flex-start;
+    min-height: 52px;
+    padding: 0 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    font-size: 17px;
+  }
+
+  .top-nav .nav-link.active {
+    background: transparent;
+    color: var(--color-primary-on-dark);
+  }
+
+  #login-section,
+  #form-section,
+  #list-section,
+  #panel-section,
+  #teachers-section,
+  #tasks-section,
+  #help-section,
+  #substitutions-section,
+  #justifications-section,
+  #control-presencia-section,
+  #permisos-section,
+  .help-block,
+  .panel,
+  .controls,
+  .table-container {
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+  }
+
+  .app-header {
+    gap: var(--space-xs);
+  }
+
+  .panel-controls,
+  .list-date-controls,
+  .teacher-schedule-controls,
+  .justifications-actions,
+  .actions,
+  .filters,
+  .row,
+  .file-upload {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .panel-controls label,
+  .list-date-controls label,
+  .teacher-schedule-controls label,
+  .field {
+    min-width: 0;
+  }
+
+  button,
+  .button,
+  .pill-button,
+  .file-upload label {
+    width: 100%;
+  }
+
+  .btn-logout,
+  .list-date-nav,
+  .modal-close,
+  .help-btn {
+    width: auto;
+  }
+
+  .top-nav-menu-button {
+    width: calc(100% + 32px);
+  }
+
+  .absence-item {
+    flex-direction: column;
+  }
+
+  .absence-actions,
+  .absence-actions button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 419px) {
+  #app > h1 {
+    font-size: 28px;
+  }
+}
+
 @media print {
   body {
     margin: 0;
     padding: 0;
+    background: #ffffff;
+    color: #000000;
   }
 
-  body.printing-guest-panel #app>h1,
+  body::before {
+    display: none;
+  }
+
+  #app {
+    max-width: none;
+    padding: 0;
+  }
+
+  body.printing-guest-panel #app > h1,
   body.printing-guest-panel .app-header,
   body.printing-guest-panel .top-nav,
   body.printing-guest-panel .guest-subsection-tabs,
@@ -1396,12 +1495,11 @@ table tbody tr:hover td {
   body.printing-guest-panel #teachers-section,
   body.printing-guest-panel .guest-subsection,
   body.printing-guest-panel .guest-panel-print-area {
-    margin: 0;
-    padding: 0;
     width: 100%;
     max-width: none;
+    margin: 0;
+    padding: 0;
     border: 0;
-    box-shadow: none;
     background: #ffffff;
   }
 
@@ -1410,40 +1508,7 @@ table tbody tr:hover td {
     overflow: visible;
   }
 
-  body.printing-guest-panel .schedule-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 11px;
-  }
-
-  body.printing-guest-panel .schedule-table th,
-  body.printing-guest-panel .schedule-table td {
-    border: 1px solid #000;
-    padding: 6px;
-  }
-
-  body.printing-guest-panel .schedule-table thead th {
-    background: #f0f0f0;
-  }
-
-  body.printing-guest-panel .guest-panel-class-detail {
-    display: none;
-  }
-
-  body.printing-guest-panel .guest-print-panel-table {
-    font-size: 9px;
-  }
-
-  body.printing-guest-panel .guest-print-panel-table th,
-  body.printing-guest-panel .guest-print-panel-table td {
-    padding: 3px 4px;
-  }
-
-  body.printing-guest-panel .guest-print-line {
-    line-height: 1.12;
-  }
-
-  #app>h1,
+  #app > h1,
   .app-header,
   .top-nav,
   .panel-controls,
@@ -1472,53 +1537,63 @@ table tbody tr:hover td {
     margin-top: 0.25rem;
   }
 
-  .panel-table-wrapper {
+  #panel-section,
+  #tasks-section,
+  #justifications-section,
+  #teachers-section,
+  .panel-table-wrapper,
+  .teacher-schedule-grid {
     width: 100%;
     margin: 0;
     padding: 0;
+    border: 0;
+    overflow: visible;
+    background: #ffffff;
   }
 
-  .panel-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-  }
-
-  .panel-table th,
-  .panel-table td {
-    border: 1px solid #000;
-    padding: 8px;
-    text-align: left;
-  }
-
-  .panel-table th {
-    background-color: #f0f0f0;
-    font-weight: bold;
-  }
-
-  .panel-table tbody tr.panel-slot-even td {
-    background-color: #ececec;
-  }
-
-  .panel-table tbody tr.panel-slot-odd td {
-    background-color: #ffffff;
-  }
-
+  table,
+  .panel-table,
+  .schedule-table,
   .justifications-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 12px;
+    font-size: 11px;
   }
 
+  th,
+  td,
+  .panel-table th,
+  .panel-table td,
+  .schedule-table th,
+  .schedule-table td,
   .justifications-table th,
   .justifications-table td {
-    border: 1px solid #000;
-    padding: 8px;
-    text-align: left;
+    border: 1px solid #000000;
+    padding: 6px;
   }
 
+  th,
+  .panel-table th,
+  .schedule-table thead th,
   .justifications-table th {
-    background-color: #f0f0f0;
-    font-weight: bold;
+    background: #f0f0f0;
+    font-weight: 600;
+  }
+
+  body.printing-guest-panel .guest-panel-class-detail {
+    display: none;
+  }
+
+  body.printing-guest-panel .guest-print-panel-table {
+    font-size: 9px;
+  }
+
+  body.printing-guest-panel .guest-print-panel-table th,
+  body.printing-guest-panel .guest-print-panel-table td {
+    padding: 3px 4px;
+  }
+
+  body.printing-guest-panel .guest-print-line {
+    line-height: 1.12;
   }
 }
