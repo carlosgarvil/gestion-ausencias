@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="es">
 
 <head>
@@ -18,7 +18,7 @@
 
 <body>
   <div id="app">
-    <h1>Gestión de ausencias del profesorado</h1>
+    <h1><img class="app-title-logo" src="img/Logo IES P Sur 2023.jpg" alt="IES Polígono Sur" /> <span>Gestión de ausencias del profesorado</span></h1>
 
     <section id="login-section" v-if="!isLoggedIn">
       <h2>Acceso</h2>
@@ -69,7 +69,7 @@
             <label>
               Grupo
               <select v-model="selectedGroup">
-                <option value="">Selecciona…</option>
+                <option value="">Selecciona...</option>
                 <option v-for="group in groups" :key="`group-${group}`" :value="group">{{ group }}</option>
               </select>
             </label>
@@ -115,7 +115,7 @@
 
         <div class="teacher-schedule-content">
           <p v-if="!selectedGroup" class="absence-meta">Selecciona un grupo para cargar su horario.</p>
-          <p v-else-if="loadingGroupSchedule" class="absence-meta">Cargando horario…</p>
+          <p v-else-if="loadingGroupSchedule" class="absence-meta">Cargando horario...</p>
           <p v-else-if="groupScheduleMessage" class="absence-meta">{{ groupScheduleMessage }}</p>
           <div v-else class="teacher-schedule-grid">
             <table class="schedule-table">
@@ -160,6 +160,7 @@
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="flatpickr.js"></script>
+  <script src="nav.js"></script>
   <script>
     const { createApp } = Vue;
     const { createClient } = supabase;
@@ -566,7 +567,7 @@
           return {
             slotValue: this.normalizeSlotValue(entry),
             weekdayValue: this.normalizeWeekdayValue(entry),
-            subject: entry.subject || entry.subject_name || entry.materia || entry.asignatura || "—",
+            subject: entry.subject || entry.subject_name || entry.materia || entry.asignatura || "-",
             teacher: entry.teacher_name || entry.teacher || "",
             classroom: entry.classroom || entry.classroom_name || entry.room || entry.aula || "",
             visible: this.isScheduleEntryVisible(entry),
