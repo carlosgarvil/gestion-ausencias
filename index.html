@@ -144,9 +144,6 @@
                   <div class="absence-meta">{{ formatSlotLabel(absence.start_slot, absence.end_slot) }}</div>
                   <div v-if="absence.reason" class="absence-meta">Motivo: {{ absence.reason }}</div>
                 </div>
-                <div class="absence-actions">
-                  <button type="button" class="btn-delete" @click="deleteAbsence(absence.id)">Eliminar</button>
-                </div>
                 <div class="absence-edit" v-if="absence.editing">
                   <p class="absence-edit-title">Editar tramos</p>
                   <div class="absence-edit-controls">
@@ -166,6 +163,9 @@
                   <div v-if="absence.editMessage" class="absence-edit-message" :class="absence.editMessageType">
                     {{ absence.editMessage }}
                   </div>
+                </div>
+                <div class="absence-actions">
+                  <button type="button" class="btn-delete" @click="deleteAbsence(absence.id)">Eliminar ausencia</button>
                 </div>
               </article>
             </div>

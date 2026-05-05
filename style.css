@@ -665,7 +665,8 @@ textarea:disabled {
 }
 
 .absence-edit {
-  flex: 1 0 100%;
+  flex: 0 0 100%;
+  width: 100%;
   margin-top: var(--space-xs);
   padding-top: var(--space-sm);
   border-top: 1px solid var(--color-hairline);
@@ -1451,6 +1452,15 @@ details summary {
 
   .absence-item {
     flex-direction: column;
+  }
+
+  .absence-main {
+    flex-basis: auto;
+    width: 100%;
+  }
+
+  .absence-edit {
+    flex-basis: auto;
   }
 
   .absence-actions,
