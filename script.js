@@ -192,7 +192,10 @@ createApp({
         days: WEEK_DAYS.map(() => [])
       })),
       loadingTeacherSchedule: false,
-      teacherScheduleMessage: ""
+      teacherScheduleMessage: "",
+      currentScheduleWeekday: null,
+      currentScheduleSlot: null,
+      currentScheduleTimer: null
     };
   },
   created() {
@@ -201,8 +204,19 @@ createApp({
   mounted() {
     this.hasTasksPage = Boolean(document.getElementById("tasks-section"));
     this.syncJustificationsMonthParts(this.justificationsMonth);
+    this.updateCurrentSchedulePosition();
+    this.currentScheduleTimer = window.setInterval(
+      this.updateCurrentSchedulePosition,
+      60000
+    );
     if (this.hasTasksPage && this.isLoggedIn) {
       this.loadTasksForDate();
+    }
+  },
+  beforeUnmount() {
+    if (this.currentScheduleTimer) {
+      window.clearInterval(this.currentScheduleTimer);
+      this.currentScheduleTimer = null;
     }
   },
   computed: {
@@ -1324,6 +1338,40 @@ createApp({
       const jsDay = date.getDay(); // 0=domingo ... 6=sábado
       if (jsDay === 0) return 7;
       return jsDay;
+    },
+    getSlotRangeMinutes(slot) {
+      const match = /^(\d{2}):(\d{2})-(\d{2}):(\d{2})/.exec(slot.label || "");
+      if (!match) {
+        return null;
+      }
+
+      const [, startHour, startMinute, endHour, endMinute] = match.map(Number);
+      return {
+        start: startHour * 60 + startMinute,
+        end: endHour * 60 + endMinute
+      };
+    },
+    getCurrentScheduleSlotValue(date = new Date()) {
+      const currentMinutes = date.getHours() * 60 + date.getMinutes();
+      const currentSlot = this.slotOptions.find((slot) => {
+        const range = this.getSlotRangeMinutes(slot);
+        return range && currentMinutes >= range.start && currentMinutes < range.end;
+      });
+
+      return currentSlot ? currentSlot.value : null;
+    },
+    updateCurrentSchedulePosition() {
+      const now = new Date();
+      const jsDay = now.getDay();
+      this.currentScheduleWeekday = jsDay === 0 ? 7 : jsDay;
+      this.currentScheduleSlot = this.getCurrentScheduleSlotValue(now);
+    },
+    isCurrentTeacherScheduleClass(classInfo) {
+      return Boolean(
+        classInfo &&
+        Number(classInfo.weekdayValue) === Number(this.currentScheduleWeekday) &&
+        Number(classInfo.slotValue) === Number(this.currentScheduleSlot)
+      );
     },
     normalizeTasksValue(value) {
       if (value === null || value === undefined) {

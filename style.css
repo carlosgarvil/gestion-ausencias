@@ -794,6 +794,10 @@ tbody tr:nth-child(even) td {
   background: #fff2f0;
 }
 
+.schedule-class--current {
+  border-color: var(--color-primary);
+}
+
 .schedule-class-main,
 .schedule-class-meta,
 .guest-print-line {

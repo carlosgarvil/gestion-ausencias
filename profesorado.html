@@ -110,7 +110,10 @@
                   <td v-for="(cell, index) in row.days" :key="`cell-${row.slotValue}-${index}`">
                     <div v-if="cell.length" class="schedule-cell">
                       <article v-for="(classInfo, idx) in cell" :key="`class-${row.slotValue}-${index}-${idx}`"
-                        class="schedule-class" :class="{ 'schedule-class--hidden': !classInfo.visible }"
+                        class="schedule-class" :class="{
+                          'schedule-class--hidden': !classInfo.visible,
+                          'schedule-class--current': isCurrentTeacherScheduleClass(classInfo)
+                        }"
                         @click="startClassInlineEdit(classInfo)">
                         <template v-if="!classInfo.editing">
                           <p class="schedule-class-main">{{ classInfo.subject }}</p>
@@ -185,6 +188,5 @@
 </body>
 
 </html>
-
 
 
