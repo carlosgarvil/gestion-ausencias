@@ -122,7 +122,9 @@
                 </td>
                 <td>{{ getSlotLabel(justification.start_slot) }}</td>
                 <td>{{ getSlotLabel(justification.end_slot) }}</td>
-                <td>{{ truncateReason(justification.reason) }}</td>
+                <td :title="justification.reason ? justification.reason.trim() : ''">
+                  {{ truncateReason(justification.reason) }}
+                </td>
                 <td>
                   <select class="status-select" :value="justification.status"
                     @change="updateJustificationStatus(justification, $event.target.value)">
