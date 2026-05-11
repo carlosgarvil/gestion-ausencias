@@ -488,6 +488,23 @@ textarea:disabled {
   margin-top: var(--space-sm);
 }
 
+.teacher-status-button {
+  min-height: 36px;
+  margin-top: 0;
+  padding: 8px 14px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.teacher-schedule-controls .tooltip-wrapper {
+  align-self: flex-end;
+}
+
+.teacher-status-control {
+  margin-top: 0;
+  font-size: 14px;
+}
+
 .message,
 .status-message,
 .schedule-edit-message,
@@ -1205,7 +1222,7 @@ details summary {
 }
 
 .cell-match {
-  background: #f0f7ff !important;
+  background: #fbe741 !important;
   color: var(--color-primary);
   font-weight: 600;
 }

@@ -77,11 +77,14 @@
               </select>
             </label>
             <div v-if="teacherScheduleTeacher" class="tooltip-wrapper">
-              <label class="schedule-edit-toggle teacher-status-control">
-                <input type="checkbox" :checked="teacherScheduleActive" @change="handleTeacherActiveToggle($event.target.checked)"
-                  :disabled="teacherActiveSaving" />
-                  Marcar docente como {{ teacherScheduleActive ? 'no activo' : 'activo' }}
-              </label>
+              <div class="teacher-status-control">
+                <span>{{ teacherScheduleActive ? 'Docente activo' : 'Docente inactivo' }}</span>
+                <button type="button" class="btn-save teacher-status-button"
+                  @click="handleTeacherActiveToggle(!teacherScheduleActive)" :disabled="teacherActiveSaving"
+                  :aria-pressed="teacherScheduleActive ? 'true' : 'false'">
+                  {{ teacherScheduleActive ? 'Desactivar docente' : 'Activar docente' }}
+                </button>
+              </div>
               <span class="tooltip-text" role="tooltip">
                 Un profesor no activo no aparecerá en el panel de ausencias
               </span>
@@ -188,5 +191,3 @@
 </body>
 
 </html>
-
-
