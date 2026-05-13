@@ -69,10 +69,7 @@
           <div class="row">
             <div class="field">
               <label>CSV (exportación Séneca)<span class="footer-note footer-note-inline">
-                  <span class="info-icon" tabindex="0" role="img" aria-label="Orden circular">
-                    &#8505;
-                    <span class="tooltip">Columnas esperadas: Nombre, Motivo, Fecha inicio, Fecha fin, Estado.</span>
-                  </span>
+                  <span class="tooltip-icon" title="Columnas esperadas: Nombre, Motivo, Fecha inicio, Fecha fin, Estado." aria-label="Columnas esperadas: Nombre, Motivo, Fecha inicio, Fecha fin, Estado." role="img">ℹ️</span>
                 </span></label>
               <input id="csvFile" class="w-file" type="file" accept=".csv,text/csv" />
             </div>
@@ -94,10 +91,7 @@
 
             <div class="field">
               <label>Letra desempate<span class="footer-note footer-note-inline">
-                  <span class="info-icon" tabindex="0" role="img" aria-label="Orden circular">
-                    &#8505;
-                    <span class="tooltip">Orden circular: H→I→...→Z→A→...</span>
-                  </span>
+                  <span id="letraTooltip" class="tooltip-icon" title="Orden circular: Ñ→Z→A→Ñ" aria-label="Orden circular: Ñ→Z→A→Ñ" role="img">ℹ️</span>
                 </span></label>
               <input id="letra" class="w-letter" type="text" maxlength="1" />
 
@@ -323,6 +317,7 @@
         lectivoFin: document.getElementById("lectivoFin"),
         cupoDia: document.getElementById("cupoDia"),
         letra: document.getElementById("letra"),
+        letraTooltip: document.getElementById("letraTooltip"),
         runBtn: document.getElementById("runBtn"),
         exportBtn: document.getElementById("exportBtn"),
         status: document.getElementById("status"),
@@ -337,6 +332,13 @@
       let lastResultHeaders = [];
       const registeringRows = new Set();
       let teacherNamesCache = null;
+
+      function updateLetraTooltip() {
+        const letra = normalizeForSort(els.letra.value || DEFAULT_LETRA)[0] || DEFAULT_LETRA;
+        const tooltipText = `Orden circular: ${letra}→Z→A→${letra}`;
+        els.letraTooltip.title = tooltipText;
+        els.letraTooltip.setAttribute("aria-label", tooltipText);
+      }
 
       function setError(msg) {
         els.err.style.display = msg ? "block" : "none";
@@ -699,7 +701,10 @@
         els.lectivoInicio.value = DEFAULT_LECTIVO_INI;
         els.lectivoFin.value = DEFAULT_LECTIVO_FIN;
         els.letra.value = DEFAULT_LETRA;
+        updateLetraTooltip();
       })();
+
+      els.letra.addEventListener("input", updateLetraTooltip);
 
       els.runBtn.addEventListener("click", async () => {
         setError("");
